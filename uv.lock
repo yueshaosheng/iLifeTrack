@@ -340,36 +340,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ilifetrack"
-version = "0.5.3"
-source = { editable = "." }
-dependencies = [
-    { name = "cryptography" },
-    { name = "icloudpy" },
-    { name = "keyring" },
-    { name = "pytypedstream" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pyinstaller" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cryptography", specifier = ">=42,<47" },
-    { name = "icloudpy", specifier = "==0.9.0" },
-    { name = "keyring", specifier = ">=25,<26" },
-    { name = "pyinstaller", marker = "extra == 'dev'", specifier = ">=6,<7" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8,<9" },
-    { name = "pytypedstream", specifier = ">=0.1,<0.2" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8,<1" },
-]
-provides-extras = ["dev"]
-
-[[package]]
 name = "icloudpy"
 version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -396,6 +366,36 @@ sdist = { url = "https://files.pythonhosted.org/packages/5f/f7/abb373e5757eaec4b
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/b0/0e52c878c53f245edd3a11020f20979b3f490f245af532c7cae3027754b5/idna-3.19-py3-none-any.whl", hash = "sha256:815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4", size = 68550, upload-time = "2026-08-18T05:14:22.343Z" },
 ]
+
+[[package]]
+name = "ilifetrack"
+version = "0.5.4"
+source = { editable = "." }
+dependencies = [
+    { name = "cryptography" },
+    { name = "icloudpy" },
+    { name = "keyring" },
+    { name = "pytypedstream" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pyinstaller" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography", specifier = ">=42,<47" },
+    { name = "icloudpy", specifier = "==0.9.0" },
+    { name = "keyring", specifier = ">=25,<26" },
+    { name = "pyinstaller", marker = "extra == 'dev'", specifier = ">=6,<7" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8,<9" },
+    { name = "pytypedstream", specifier = ">=0.1,<0.2" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8,<1" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "importlib-metadata"

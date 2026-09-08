@@ -3,6 +3,13 @@
 English · [简体中文](README.md)
 
 <p align="center">
+  <a href="https://github.com/yueshaosheng/iLifeTrack/releases"><img src="https://img.shields.io/github/v/release/yueshaosheng/iLifeTrack?display_name=tag&sort=semver" alt="GitHub Release"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Apple%20Silicon-supported-0A84FF?logo=apple" alt="Apple Silicon">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/yueshaosheng/iLifeTrack" alt="MIT License"></a>
+</p>
+
+<p align="center">
   <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack icon">
 </p>
 
@@ -162,4 +169,4 @@ Thank you to their maintainers and contributors.
 
 ## License
 
-No open-source license has been selected yet. All rights are reserved until a license is added.
+iLifeTrack is available under the [MIT License](LICENSE).

@@ -3,6 +3,13 @@
 [English](README_EN.md) · 简体中文
 
 <p align="center">
+  <a href="https://github.com/yueshaosheng/iLifeTrack/releases"><img src="https://img.shields.io/github/v/release/yueshaosheng/iLifeTrack?display_name=tag&sort=semver" alt="GitHub Release"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Apple%20Silicon-supported-0A84FF?logo=apple" alt="Apple Silicon">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/yueshaosheng/iLifeTrack" alt="MIT License"></a>
+</p>
+
+<p align="center">
   <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack 图标">
 </p>
 
@@ -166,4 +173,4 @@ iLifeTrack 的实现离不开以下开源项目：
 
 ## 许可证
 
-当前仓库尚未附带开源许可证。在选择许可证前，默认保留所有权利。
+本项目采用 [MIT License](LICENSE)。
