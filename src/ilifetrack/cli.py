@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -34,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         "auth", help="Create or refresh the local iCloud session"
     )
     auth.add_argument("--apple-id", help="Apple account; password is prompted securely")
+    subparsers.add_parser("logout", help=argparse.SUPPRESS)
 
     subparsers.add_parser("devices", help="Refresh and list discoverable devices")
 
@@ -106,6 +108,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         paths.ensure()
         if args.command == "auth":
             return _auth(paths, args.apple_id)
+        if args.command == "logout":
+            return _logout(paths)
         if args.command in {"install-agent", "start"}:
             config = load_config(paths.config)
             if not config.selected_device_keys and not config.communications_enabled:
@@ -348,6 +352,34 @@ def _auth(paths: AppPaths, apple_id_argument: str | None) -> int:
     return 0
 
 
+def _logout(paths: AppPaths) -> int:
+    """Remove the local Apple session without deleting the user's archive."""
+    try:
+        config = load_config(paths.config)
+    except ConfigurationError:
+        config = Config()
+
+    config.apple_id = ""
+    config.selected_device_keys = []
+    save_config(paths.config, config)
+
+    if paths.sessions.exists():
+        for entry in paths.sessions.iterdir():
+            if entry.is_dir():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink(missing_ok=True)
+
+    if launch_agent_path().exists():
+        if config.communications_enabled:
+            install_agent(paths)
+        else:
+            uninstall_agent()
+
+    print("Apple 账户认证已取消；轨迹、通讯归档和加密密钥均已保留")
+    return 0
+
+
 def _devices(
     provider: ICloudProvider,
     database: HistoryDatabase,
@@ -417,8 +449,12 @@ def _select(
     save_config(paths.config, config)
     print(f"已选择 {len(selected)} 台设备")
     if launch_agent_path().exists():
-        install_agent(paths)
-        print("后台服务已重启，新设备选择已生效")
+        if selected or config.communications_enabled:
+            install_agent(paths)
+            print("后台服务已重启，新设备选择已生效")
+        else:
+            uninstall_agent()
+            print("没有启用中的记录项目，后台服务已停止")
     return 0
 
 

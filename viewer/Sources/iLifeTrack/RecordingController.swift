@@ -5,6 +5,7 @@ import Foundation
 @MainActor
 final class RecordingController: ObservableObject {
     @Published private(set) var isConfigured = false
+    @Published private(set) var appleID = ""
     @Published private(set) var isRunning = false
     @Published private(set) var intervalSeconds = 300
     @Published private(set) var retentionDays: Int?
@@ -19,13 +20,15 @@ final class RecordingController: ObservableObject {
         if let data = try? Data(contentsOf: CLIClient.configURL),
            let config = try? JSONDecoder().decode(LocalConfig.self, from: data)
         {
-            isConfigured = true
+            appleID = config.appleID.trimmingCharacters(in: .whitespacesAndNewlines)
+            isConfigured = !appleID.isEmpty
             intervalSeconds = config.intervalSeconds
             retentionDays = config.retentionDays
             communicationsEnabled = config.communicationsEnabled ?? false
             selectedDeviceKeys = Set(config.selectedDeviceKeys)
         } else {
             isConfigured = false
+            appleID = ""
             selectedDeviceKeys = []
             communicationsEnabled = false
         }
@@ -66,6 +69,12 @@ final class RecordingController: ObservableObject {
     func refreshDevices() async {
         await perform(success: "设备列表已刷新") {
             _ = try await CLIClient.run(["devices"])
+        }
+    }
+
+    func cancelAuthentication() async {
+        await perform(success: "Apple 账户认证已取消，已有归档数据仍然保留") {
+            _ = try await CLIClient.runWithoutMasterKey(["logout"])
         }
     }
 

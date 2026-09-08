@@ -7,7 +7,6 @@ struct RecordingSettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject private var authentication = AuthenticationController()
-    @State private var draftSelection: Set<String> = []
     @State private var draftInterval = 300
     @State private var customIntervalMinutes = 5
     @State private var draftRetention = 0
@@ -33,9 +32,7 @@ struct RecordingSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("完成") {
-                    Task { await saveSelectionAndDismiss() }
-                }
+                Button("完成") { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(recording.isBusy)
             }
@@ -140,7 +137,11 @@ struct RecordingSettingsView: View {
                                 Task { await recording.start() }
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(!recording.isConfigured || draftSelection.isEmpty)
+                            .disabled(
+                                recording.isBusy
+                                    || (recording.selectedDeviceKeys.isEmpty
+                                        && !recording.communicationsEnabled)
+                            )
                         }
                     }
                 }
@@ -184,45 +185,6 @@ struct RecordingSettingsView: View {
                         )
 
                         Spacer()
-                    }
-                }
-
-                Section("记录设备") {
-                    if availableDevices.isEmpty {
-                        Text("当前“查找”中没有可记录的设备。")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(availableDevices) { device in
-                            Toggle(isOn: selectionBinding(for: device.deviceKey)) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(device.name)
-                                    Text(device.deviceType)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-
-                    HStack {
-                        Button("刷新设备") {
-                            Task {
-                                await recording.refreshDevices()
-                                store.reload()
-                                syncDrafts()
-                            }
-                        }
-                        .disabled(!recording.isConfigured || recording.isBusy)
-
-                        Spacer()
-
-                        Button("应用设备选择") {
-                            Task { await recording.applySelection(draftSelection) }
-                        }
-                        .disabled(
-                            recording.isBusy || draftSelection.isEmpty
-                                || draftSelection == recording.selectedDeviceKeys
-                        )
                     }
                 }
 
@@ -504,9 +466,6 @@ struct RecordingSettingsView: View {
                 Task { await recording.refresh() }
             }
         }
-        .onChange(of: recording.selectedDeviceKeys) { _, newValue in
-            draftSelection = newValue.intersection(availableDeviceKeys)
-        }
         .alert("永久清除匹配的轨迹？", isPresented: $showingClearConfirmation) {
             Button("取消", role: .cancel) {}
             Button("永久清除", role: .destructive) {
@@ -551,23 +510,9 @@ struct RecordingSettingsView: View {
         }
     }
 
-    private func selectionBinding(for deviceKey: String) -> Binding<Bool> {
-        Binding(
-            get: { draftSelection.contains(deviceKey) },
-            set: { selected in
-                if selected {
-                    draftSelection.insert(deviceKey)
-                } else {
-                    draftSelection.remove(deviceKey)
-                }
-            }
-        )
-    }
-
     private func syncDrafts() {
         syncIntervalDraft(recording.intervalSeconds)
         draftRetention = recording.retentionDays ?? 0
-        draftSelection = recording.selectedDeviceKeys.intersection(availableDeviceKeys)
         if !initializedClearRange, let dashboard = recording.dashboard {
             clearStart = dashboard.historyStartMS.map { date(from: $0) }
                 ?? Date().addingTimeInterval(-30 * 86_400)
@@ -596,27 +541,6 @@ struct RecordingSettingsView: View {
                 $0.deviceKey == deviceKey
             }?.deviceName
             ?? "旧轨迹设备（名称无法解密）"
-    }
-
-    private var availableDevices: [TrackedDevice] {
-        store.devices.filter(\.isAvailable)
-    }
-
-    private var availableDeviceKeys: Set<String> {
-        Set(availableDevices.map(\.deviceKey))
-    }
-
-    @MainActor
-    private func saveSelectionAndDismiss() async {
-        let selection = draftSelection.intersection(availableDeviceKeys)
-        guard selection != recording.selectedDeviceKeys else {
-            dismiss()
-            return
-        }
-        await recording.applySelection(selection)
-        if recording.selectedDeviceKeys == selection {
-            dismiss()
-        }
     }
 
     private var clearButtonTitle: String {

@@ -70,7 +70,12 @@ struct ContentView: View {
 
             switch selectedSection {
             case .locations:
-                MapBrowserView(store: store, browserState: locationBrowserState)
+                MapBrowserView(
+                    store: store,
+                    recording: recording,
+                    browserState: locationBrowserState,
+                    onShowAuthentication: { showingSettings = true }
+                )
             case .communications:
                 CommunicationArchiveView(store: store, archiveState: communicationArchiveState)
             }
@@ -102,9 +107,12 @@ struct ContentView: View {
 
 struct MapBrowserView: View {
     @ObservedObject var store: TrackStore
+    @ObservedObject var recording: RecordingController
     @ObservedObject var browserState: LocationBrowserState
+    let onShowAuthentication: () -> Void
     @AppStorage("coordinateCorrectionMode") private var coordinateCorrectionRawValue =
         CoordinateCorrectionMode.automatic.rawValue
+    @State private var showingCancelAuthenticationConfirmation = false
     private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     private var selectedDeviceKey: String? {
@@ -219,6 +227,20 @@ struct MapBrowserView: View {
         .onChange(of: coordinateCorrectionRawValue) { _, _ in
             resetTimelineAndCamera()
         }
+        .alert("取消 Apple 账户认证？", isPresented: $showingCancelAuthenticationConfirmation) {
+            Button("保留认证", role: .cancel) {}
+            Button("取消认证", role: .destructive) {
+                Task {
+                    await recording.cancelAuthentication()
+                    store.reload()
+                }
+            }
+        } message: {
+            Text(
+                "本机保存的 Apple 登录会话会被移除，并停止记录设备位置。"
+                    + "已有轨迹、通讯归档和加密密钥都会保留。"
+            )
+        }
     }
 
     private var sidebar: some View {
@@ -263,34 +285,154 @@ struct MapBrowserView: View {
             .padding(.bottom, 8)
             .help("自动校正中国大陆地区的固定地图偏移；数据库仍保存 Apple 返回的原始坐标。")
 
-            List(store.devices, selection: $browserState.selectedDeviceKey) { device in
-                HStack(spacing: 10) {
-                    Image(systemName: iconName(for: device.deviceType))
-                        .frame(width: 22)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(device.name)
-                            .lineLimit(1)
-                        Text(device.deviceType)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if !device.isAvailable {
-                            Text("已从“查找”移除 · 历史轨迹保留")
-                                .font(.caption2)
-                                .foregroundStyle(.orange)
+            List(selection: $browserState.selectedDeviceKey) {
+                Section("Apple 账户") {
+                    HStack(spacing: 10) {
+                        Image(systemName: accountStatusIcon)
+                            .foregroundStyle(accountStatusColor)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(accountStatusTitle)
+                            if recording.isConfigured {
+                                Text(recording.appleID)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+
+                    if recording.isConfigured {
+                        Button("取消认证…", role: .destructive) {
+                            showingCancelAuthenticationConfirmation = true
+                        }
+                        .disabled(recording.isBusy)
+                    } else {
+                        Button("开始认证…") {
+                            onShowAuthentication()
                         }
                     }
                 }
-                .tag(device.deviceKey)
+
+                Section("当前“查找”设备") {
+                    if availableDevices.isEmpty {
+                        Text(recording.isConfigured ? "没有发现可用设备" : "认证后可查看并选择设备")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(availableDevices) { device in
+                            deviceRow(device, showsRecordingToggle: true)
+                                .tag(device.deviceKey)
+                        }
+                    }
+
+                    Button("刷新设备", systemImage: "arrow.clockwise") {
+                        Task {
+                            await recording.refreshDevices()
+                            store.reload()
+                        }
+                    }
+                    .disabled(!recording.isConfigured || recording.isBusy)
+                }
+
+                if !historicalDevices.isEmpty {
+                    Section("历史设备") {
+                        ForEach(historicalDevices) { device in
+                            deviceRow(device, showsRecordingToggle: false)
+                                .tag(device.deviceKey)
+                        }
+                    }
+                }
+
+                if let error = recording.errorMessage {
+                    Section {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
             }
 
             Divider()
-            Button("重新载入", systemImage: "arrow.clockwise") {
+            Button("重新载入轨迹", systemImage: "arrow.clockwise") {
                 reload()
             }
             .buttonStyle(.borderless)
             .padding()
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
+    }
+
+    private var availableDevices: [TrackedDevice] {
+        store.devices.filter(\.isAvailable)
+    }
+
+    private var historicalDevices: [TrackedDevice] {
+        store.devices.filter { !$0.isAvailable }
+    }
+
+    private var accountNeedsAuthentication: Bool {
+        recording.dashboard?.lastPollOutcome == "auth_required"
+    }
+
+    private var accountStatusTitle: String {
+        if !recording.isConfigured { return "未认证" }
+        return accountNeedsAuthentication ? "需要重新认证" : "已认证"
+    }
+
+    private var accountStatusIcon: String {
+        if !recording.isConfigured { return "person.crop.circle.badge.questionmark" }
+        return accountNeedsAuthentication
+            ? "person.crop.circle.badge.exclamationmark" : "checkmark.circle.fill"
+    }
+
+    private var accountStatusColor: Color {
+        if !recording.isConfigured { return .secondary }
+        return accountNeedsAuthentication ? .orange : .green
+    }
+
+    private func recordingBinding(for deviceKey: String) -> Binding<Bool> {
+        Binding(
+            get: { recording.selectedDeviceKeys.contains(deviceKey) },
+            set: { enabled in
+                var selection = recording.selectedDeviceKeys
+                if enabled {
+                    selection.insert(deviceKey)
+                } else {
+                    selection.remove(deviceKey)
+                }
+                Task { await recording.applySelection(selection) }
+            }
+        )
+    }
+
+    private func deviceRow(
+        _ device: TrackedDevice,
+        showsRecordingToggle: Bool
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: iconName(for: device.deviceType))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(device.name)
+                    .lineLimit(1)
+                Text(device.deviceType)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !device.isAvailable {
+                    Text("已从“查找”移除 · 历史轨迹保留")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+            Spacer(minLength: 8)
+            if showsRecordingToggle {
+                Toggle("记录 \(device.name)", isOn: recordingBinding(for: device.deviceKey))
+                    .labelsHidden()
+                    .disabled(!recording.isConfigured || recording.isBusy)
+                    .help("控制是否持续记录这台设备的位置")
+            }
+        }
     }
 
     @ViewBuilder

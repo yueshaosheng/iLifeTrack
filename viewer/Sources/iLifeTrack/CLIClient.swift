@@ -52,6 +52,12 @@ enum CLIClient {
         }.value
     }
 
+    static func runWithoutMasterKey(_ arguments: [String]) async throws -> String {
+        try await Task.detached(priority: .userInitiated) {
+            try runSynchronously(executable: executableURL, arguments: arguments)
+        }.value
+    }
+
     static func runSystem(_ executable: String, arguments: [String]) async throws -> String {
         try await Task.detached(priority: .utility) {
             try runSynchronously(
