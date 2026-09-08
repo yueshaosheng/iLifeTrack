@@ -1,19 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="background" x1="150" y1="120" x2="870" y2="900" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1769E0"/>
-      <stop offset="1" stop-color="#14A89A"/>
+    <linearGradient id="background" x1="188" y1="116" x2="836" y2="908" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2882F4"/>
+      <stop offset="0.52" stop-color="#1979DE"/>
+      <stop offset="1" stop-color="#19A99A"/>
     </linearGradient>
+    <linearGradient id="surface" x1="512" y1="142" x2="512" y2="850" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.58" stop-color="#FFFFFF" stop-opacity="0.03"/>
+      <stop offset="1" stop-color="#083B72" stop-opacity="0.10"/>
+    </linearGradient>
+    <filter id="baseShadow" x="20" y="28" width="984" height="988" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#082D55" flood-opacity="0.28"/>
+    </filter>
+    <filter id="pinShadow" x="250" y="180" width="524" height="658" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#07396A" flood-opacity="0.25"/>
+    </filter>
   </defs>
 
-  <rect x="72" y="72" width="880" height="880" rx="210" fill="url(#background)"/>
-  <path d="M218 744C330 652 413 796 526 704C575 664 617 632 674 627"
-        fill="none" stroke="#FFFFFF" stroke-width="46" stroke-linecap="round" opacity="0.42"/>
-  <circle cx="218" cy="744" r="34" fill="#FFFFFF"/>
+  <g filter="url(#baseShadow)">
+    <rect x="72" y="64" width="880" height="880" rx="214" fill="url(#background)"/>
+    <rect x="80" y="72" width="864" height="864" rx="206" fill="url(#surface)"/>
+    <rect x="80" y="72" width="864" height="864" rx="206" fill="none"
+          stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.28"/>
+  </g>
 
-  <path d="M626 218C474 218 350 342 350 494C350 688 626 846 626 846C626 846 902 688 902 494C902 342 778 218 626 218Z"
-        fill="#FFFFFF"/>
-  <circle cx="626" cy="488" r="122" fill="url(#background)"/>
-  <circle cx="626" cy="432" r="24" fill="#FFFFFF"/>
-  <rect x="603" y="476" width="46" height="108" rx="23" fill="#FFFFFF"/>
+  <path d="M212 714C292 656 349 662 414 711C474 757 543 757 610 696C669 642 731 629 812 678"
+        fill="none" stroke="#FFFFFF" stroke-width="38" stroke-linecap="round"
+        stroke-linejoin="round" opacity="0.30"/>
+  <circle cx="212" cy="714" r="28" fill="#FFFFFF" opacity="0.88"/>
+  <circle cx="812" cy="678" r="28" fill="#FFFFFF" opacity="0.88"/>
+
+  <g filter="url(#pinShadow)">
+    <path d="M512 218C361 218 270 333 270 470C270 642 512 792 512 792C512 792 754 642 754 470C754 333 663 218 512 218Z"
+          fill="#FFFFFF"/>
+  </g>
+  <circle cx="512" cy="458" r="112" fill="url(#background)"/>
+  <circle cx="512" cy="414" r="21" fill="#FFFFFF"/>
+  <rect x="492" y="454" width="40" height="96" rx="20" fill="#FFFFFF"/>
 </svg>
