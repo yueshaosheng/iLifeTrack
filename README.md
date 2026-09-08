@@ -3,7 +3,7 @@
 [English](README_EN.md) · 简体中文
 
 <p align="center">
-  <img src="viewer/Resources/AppIcon.svg" width="128" alt="iLifeTrack 图标">
+  <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack 图标">
 </p>
 
 iLifeTrack 在 Mac 上做两件事：定时保存你个人 Apple 账户中 iPhone、iPad 和 Mac 的位置，形成历史轨迹；把已经通过 iCloud 同步到这台 Mac 的短信、iMessage 和通话记录复制到本地加密档案。

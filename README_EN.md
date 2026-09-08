@@ -3,7 +3,7 @@
 English · [简体中文](README.md)
 
 <p align="center">
-  <img src="viewer/Resources/AppIcon.svg" width="128" alt="iLifeTrack icon">
+  <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack icon">
 </p>
 
 iLifeTrack does two things on your Mac: it periodically saves the locations of the iPhone, iPad, and Mac devices in your personal Apple Account to build a location history; and it copies messages, iMessages, and call records already synced through iCloud to this Mac into an encrypted local archive.

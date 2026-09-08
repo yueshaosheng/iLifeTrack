@@ -123,7 +123,7 @@ iLifeTrack/
     ├── build-app.sh                # 完整构建、签名、安装脚本
     ├── build-icon.sh               # 从矢量源生成标准 macOS .icns
     ├── Resources/Info.plist        # App 名称、版本和权限说明
-    ├── Resources/AppIcon.svg       # 可维护的应用图标源文件
+    ├── Resources/AppIcon.png       # 1024×1024 应用图标主图
     ├── Resources/AppIcon.icns      # 打包使用的 macOS 应用图标
     ├── Sources/iLifeTrack/
     │   ├── main.swift              # GUI/后台服务双模式启动入口
@@ -236,7 +236,7 @@ GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“
 
 ### 版本号和依赖更新
 
-当前版本是 **0.5.3（Build 22）**。本次补丁版本增加退出时的后台服务选择，并包含 iLifeTrack 品牌迁移、图标精简和文档整理；没有把尚未完成的第二阶段功能计入版本承诺。
+当前版本是 **0.5.3（Build 23）**。本次补丁版本增加退出时的后台服务选择，并包含 iLifeTrack 品牌迁移、图标重制和文档整理；没有把尚未完成的第二阶段功能计入版本承诺。
 
 发布新版本时至少检查：
 
