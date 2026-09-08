@@ -4,13 +4,14 @@ English · [简体中文](README.md)
 
 <p align="center">
   <a href="https://github.com/yueshaosheng/iLifeTrack/releases"><img src="https://img.shields.io/github/v/release/yueshaosheng/iLifeTrack?display_name=tag&sort=semver" alt="GitHub Release"></a>
+  <a href="https://github.com/yueshaosheng/iLifeTrack/releases"><img src="https://img.shields.io/github/downloads/yueshaosheng/iLifeTrack/total?label=downloads" alt="GitHub Downloads"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Apple%20Silicon-supported-0A84FF?logo=apple" alt="Apple Silicon">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/yueshaosheng/iLifeTrack" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack icon">
+  <img src="docs/images/AppIcon-README.png" width="128" alt="iLifeTrack icon">
 </p>
 
 iLifeTrack is a macOS app for recording the location history and call and message records of your personal Apple devices. It continuously saves device locations from Apple's Find My app and turns them into historical tracks that you can view on a map and timeline.
@@ -72,9 +73,9 @@ The stable identity lets Keychain and Full Disk Access authorization survive loc
 
 ## Quick start
 
-1. Open iLifeTrack and select **Recording Settings**.
-2. Authenticate with your Apple Account and complete two-factor authentication.
-3. Select devices and a polling interval.
+1. Open iLifeTrack and authenticate with your Apple Account in **Recording Settings**.
+2. Return to **Location History** and enable the devices you want to record continuously.
+3. Choose a polling interval in **Recording Settings**.
 4. Select **Start Recording**. Closing the main window does not stop the background service; when quitting the app, choose whether to leave recording active or stop it before exiting.
 5. Use **Location History** to inspect the map and timeline.
 6. To archive communications, grant Full Disk Access before enabling the archive.

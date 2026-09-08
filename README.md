@@ -4,13 +4,14 @@
 
 <p align="center">
   <a href="https://github.com/yueshaosheng/iLifeTrack/releases"><img src="https://img.shields.io/github/v/release/yueshaosheng/iLifeTrack?display_name=tag&sort=semver" alt="GitHub Release"></a>
+  <a href="https://github.com/yueshaosheng/iLifeTrack/releases"><img src="https://img.shields.io/github/downloads/yueshaosheng/iLifeTrack/total?label=downloads" alt="GitHub Downloads"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Apple%20Silicon-supported-0A84FF?logo=apple" alt="Apple Silicon">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/yueshaosheng/iLifeTrack" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack 图标">
+  <img src="docs/images/AppIcon-README.png" width="128" alt="iLifeTrack 图标">
 </p>
 
 iLifeTrack 是一款记录个人 Apple 设备轨迹和通话、短信记录的 macOS 软件。它可以将 Apple“查找”App 中的设备位置信息持续保存，并形成可在地图和时间轴中查看的历史轨迹。
@@ -75,9 +76,9 @@ SwiftUI 前端和 PyInstaller 后端，并安装到：
 
 ## 快速使用
 
-1. 打开 iLifeTrack，进入“记录设置”。
-2. 使用 Apple 账户完成认证和双重认证。
-3. 选择要记录的设备及采集间隔。
+1. 打开 iLifeTrack，在“记录设置”中使用 Apple 账户完成认证和双重认证。
+2. 回到“位置轨迹”主界面，打开需要持续记录的设备开关。
+3. 在“记录设置”中选择采集间隔。
 4. 点击“开始记录”。关闭主窗口不会停止后台服务；退出应用时可选择仅退出界面，或停止后台并退出。
 5. 在“位置轨迹”中查看地图和时间轴。
 6. 如需通讯归档，先授予完全磁盘访问，再启用归档。
