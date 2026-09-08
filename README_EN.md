@@ -6,23 +6,35 @@ English · [简体中文](README.md)
   <img src="viewer/Resources/AppIcon.png" width="128" alt="iLifeTrack icon">
 </p>
 
-iLifeTrack does two things on your Mac: it periodically saves the locations of the iPhone, iPad, and Mac devices in your personal Apple Account to build a location history; and it copies messages, iMessages, and call records already synced through iCloud to this Mac into an encrypted local archive.
+iLifeTrack is a macOS app for recording the location history and call and message records of your personal Apple devices. It continuously saves device locations from Apple's Find My app and turns them into historical tracks that you can view on a map and timeline.
 
-Once a communications record has been archived, deleting it from iCloud or another Apple device does not delete the local copy. It remains available until you explicitly remove it in iLifeTrack.
+It also archives messages, iMessages, and call records that have already synced to this Mac. Once a record is archived, deleting it from iCloud or an Apple device does not remove the local backup in iLifeTrack.
 
 > [!WARNING]
 > This project relies on an undocumented Apple iCloud web interface and is intended for personal research and use. The interface may change, trigger rate limits, or require re-authentication. Do not use iLifeTrack for rescue, theft protection, or any safety-critical purpose.
 
 ## Features
 
-- Records personal iPhone, iPad, and Mac locations to build a long-term device history.
-- Keeps a deletion-independent archive of messages, iMessages, and calls: cloud or device deletion does not remove the local copy.
+### Location history
+
+- Records the last known locations of iPhone, iPad, and Mac devices in your personal Apple Account.
 - Supports multiple devices and polling intervals from 1 to 1,440 minutes.
-- Includes a MapKit map, history filters, tracks, and timeline playback.
-- Corrects the mainland China map offset for display while retaining original coordinates.
-- Encrypts local content with AES-256-GCM; the master key stays in macOS Keychain.
+- Uses MapKit to display historical tracks with time-range filters and timeline playback.
+- Corrects the mainland China map offset for display while retaining original coordinates in the database.
+
+### Communications archive
+
+- Imports messages, iMessages, and call records already synced to the Mac, then continues archiving new records.
+- Cloud or device deletion does not remove records already saved in the local archive.
+- Supports filtering by type and time, plus searches across numbers, contacts, and content.
+- Local archives can be cleared independently without deleting Apple Messages or system call history.
+
+### Data security and background operation
+
+- Encrypts sensitive data with AES-256-GCM; the master key stays in macOS Keychain.
 - Runs in the background with status reporting, notifications, and retry backoff.
-- Supports retention rules, selective deletion, automatic backups, and latest-backup restore.
+- Supports retention rules and selective deletion, with an automatic encrypted backup before cleanup.
+- Shows the latest backup and supports restoration from the GUI.
 
 ## Requirements
 
