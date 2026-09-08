@@ -55,7 +55,7 @@ The current build is intended for local development and personal use. Public dis
 1. Open iLifeTrack and select **Recording Settings**.
 2. Authenticate with your Apple Account and complete two-factor authentication.
 3. Select devices and a polling interval.
-4. Select **Start Recording**. Closing the main window does not stop the background service.
+4. Select **Start Recording**. Closing the main window does not stop the background service; when quitting the app, choose whether to leave recording active or stop it before exiting.
 5. Use **Location History** to inspect the map and timeline.
 6. To archive communications, grant Full Disk Access before enabling the archive.
 
