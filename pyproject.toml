@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ilifetrack"
-version = "0.5.6"
+version = "0.5.7"
 description = "Private macOS archive for Find My locations and local communications"
 readme = "README.md"
 license = { text = "MIT" }
