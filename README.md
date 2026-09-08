@@ -6,18 +6,20 @@
   <img src="viewer/Resources/AppIcon.svg" width="128" alt="iLifeTrack 图标">
 </p>
 
-iLifeTrack 是一款个人使用的 macOS 轨迹与通讯归档工具。它可以定时保存 Apple“查找”中设备的最后已知位置，并归档已经同步到本机的短信、iMessage 和通话记录。所有敏感内容均加密保存在本机。
+iLifeTrack 在 Mac 上做两件事：定时保存你个人 Apple 账户中 iPhone、iPad 和 Mac 的位置，形成历史轨迹；把已经通过 iCloud 同步到这台 Mac 的短信、iMessage 和通话记录复制到本地加密档案。
+
+通讯记录一旦归档，之后即使从 iCloud 或其他 Apple 设备中删除，本地副本也不会跟着删除，除非你在 iLifeTrack 中主动清除。
 
 > [!WARNING]
 > 项目依赖 Apple 未公开的 iCloud Web 接口，仅适合个人研究和自用。接口可能随时变化，也可能触发限流或重新认证。请勿将其用于救援、防盗或其他安全关键场景。
 
 ## 功能
 
-- 定时记录 iPhone、iPad 和 Mac 的最后已知位置。
+- 记录个人 iPhone、iPad 和 Mac 的位置，长期形成设备历史轨迹。
+- 无删除归档短信、iMessage 和通话记录：云端或设备删除不联动删除本地副本。
 - 多设备选择，支持 1–1440 分钟采集间隔。
 - MapKit 地图、历史轨迹、时间范围筛选和时间轴回看。
 - 中国大陆地图坐标偏移自动校正，数据库仍保存原始坐标。
-- 归档已同步到 Mac 的短信、iMessage 和通话记录。
 - 本地 AES-256-GCM 加密，主密钥保存在 macOS 钥匙串。
 - 后台自动运行、状态面板、异常通知和失败退避。
 - 数据清理、保留期限、清理前自动备份和最近备份恢复。
@@ -131,6 +133,18 @@ swift test --package-path viewer
 ```
 
 更完整的架构、数据模型、打包流程和升级路线请参阅 [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)。
+
+## 致谢
+
+iLifeTrack 的实现离不开以下开源项目：
+
+- [iCloudPy](https://github.com/mandarons/icloudpy)：连接 iCloud Web 服务并读取个人设备的最后已知位置。
+- [cryptography](https://github.com/pyca/cryptography)：为本地敏感数据提供加密能力。
+- [keyring](https://github.com/jaraco/keyring)：安全访问 macOS 钥匙串。
+- [PyInstaller](https://github.com/pyinstaller/pyinstaller)：将 Python 后台及其依赖打包进独立 Mac App。
+- [python-typedstream](https://github.com/dgelessus/python-typedstream)：解析 macOS 通讯数据库中的 typedstream 数据。
+
+感谢这些项目的维护者和贡献者。
 
 ## 许可证
 

@@ -6,18 +6,20 @@ English · [简体中文](README.md)
   <img src="viewer/Resources/AppIcon.svg" width="128" alt="iLifeTrack icon">
 </p>
 
-iLifeTrack is a personal macOS location and communications archive. It periodically saves the last known locations of devices visible in Apple Find My and archives messages, iMessages, and call records that have already synced to the Mac. Sensitive content is encrypted and stored locally.
+iLifeTrack does two things on your Mac: it periodically saves the locations of the iPhone, iPad, and Mac devices in your personal Apple Account to build a location history; and it copies messages, iMessages, and call records already synced through iCloud to this Mac into an encrypted local archive.
+
+Once a communications record has been archived, deleting it from iCloud or another Apple device does not delete the local copy. It remains available until you explicitly remove it in iLifeTrack.
 
 > [!WARNING]
 > This project relies on an undocumented Apple iCloud web interface and is intended for personal research and use. The interface may change, trigger rate limits, or require re-authentication. Do not use iLifeTrack for rescue, theft protection, or any safety-critical purpose.
 
 ## Features
 
-- Periodically records the last known location of iPhone, iPad, and Mac devices.
+- Records personal iPhone, iPad, and Mac locations to build a long-term device history.
+- Keeps a deletion-independent archive of messages, iMessages, and calls: cloud or device deletion does not remove the local copy.
 - Supports multiple devices and polling intervals from 1 to 1,440 minutes.
 - Includes a MapKit map, history filters, tracks, and timeline playback.
 - Corrects the mainland China map offset for display while retaining original coordinates.
-- Archives messages, iMessages, and calls already synced to the Mac.
 - Encrypts local content with AES-256-GCM; the master key stays in macOS Keychain.
 - Runs in the background with status reporting, notifications, and retry backoff.
 - Supports retention rules, selective deletion, automatic backups, and latest-backup restore.
@@ -131,6 +133,18 @@ swift test --package-path viewer
 ```
 
 See [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) for detailed architecture, storage, packaging, and roadmap notes.
+
+## Acknowledgements
+
+iLifeTrack is made possible by these open-source projects:
+
+- [iCloudPy](https://github.com/mandarons/icloudpy) — connects to iCloud web services and reads the last known locations of personal devices.
+- [cryptography](https://github.com/pyca/cryptography) — provides encryption for sensitive local data.
+- [keyring](https://github.com/jaraco/keyring) — provides secure access to macOS Keychain.
+- [PyInstaller](https://github.com/pyinstaller/pyinstaller) — packages the Python backend and its dependencies inside the standalone Mac app.
+- [python-typedstream](https://github.com/dgelessus/python-typedstream) — decodes typedstream data found in macOS communications databases.
+
+Thank you to their maintainers and contributors.
 
 ## License
 
