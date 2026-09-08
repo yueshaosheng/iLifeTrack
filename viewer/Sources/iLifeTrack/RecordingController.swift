@@ -58,10 +58,6 @@ final class RecordingController: ObservableObject {
     }
 
     func applySelection(_ keys: Set<String>) async {
-        guard !keys.isEmpty else {
-            errorMessage = "请至少选择一台设备。"
-            return
-        }
         await perform(success: "记录设备已更新") {
             _ = try await CLIClient.run(["select"] + keys.sorted())
         }

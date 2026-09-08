@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import signal
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Protocol
 
 from .database import HistoryDatabase
@@ -29,11 +29,13 @@ class Collector:
         database: HistoryDatabase,
         selected_device_keys: Sequence[str],
         retention_days: int | None = None,
+        reconcile_selection: Callable[[set[str]], Sequence[str]] | None = None,
     ) -> None:
         self.provider = provider
         self.database = database
         self.selected = set(selected_device_keys)
         self.retention_days = retention_days
+        self.reconcile_selection = reconcile_selection
 
     def collect_once(self) -> PollResult:
         started_at_ms = int(time.time() * 1000)
@@ -41,10 +43,13 @@ class Collector:
             if self.retention_days is not None:
                 self.database.apply_retention(self.retention_days, started_at_ms)
             devices = self.provider.fetch_devices(fetched_at_ms=started_at_ms)
+            available_keys = set(self.database.sync_devices(devices, started_at_ms))
+            if self.reconcile_selection is not None:
+                self.selected = set(self.reconcile_selection(available_keys))
             new_points = 0
             selected_count = 0
             for device in devices:
-                device_key = self.database.upsert_device(device, started_at_ms)
+                device_key = self.database.device_key(device.device_id)
                 if device_key not in self.selected:
                     continue
                 selected_count += 1

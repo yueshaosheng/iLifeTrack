@@ -7,6 +7,7 @@ struct TrackedDevice: Identifiable, Hashable {
     let name: String
     let deviceType: String
     let lastSeen: Date
+    let isAvailable: Bool
 
     var id: String { deviceKey }
 }
@@ -71,6 +72,7 @@ final class TrackStore: ObservableObject {
     @Published private(set) var points: [TrackPoint] = []
     @Published private(set) var communications: [CommunicationEntry] = []
     @Published private(set) var skippedRecords = 0
+    @Published private(set) var skippedPointRecords = 0
     @Published private(set) var lastReloaded: Date?
     @Published var errorMessage: String?
 
@@ -81,6 +83,7 @@ final class TrackStore: ObservableObject {
             points = snapshot.points
             communications = snapshot.communications
             skippedRecords = snapshot.skippedRecords
+            skippedPointRecords = snapshot.skippedPointRecords
             lastReloaded = Date()
             errorMessage = nil
         } catch {
@@ -94,6 +97,7 @@ private struct HistorySnapshot {
     let points: [TrackPoint]
     let communications: [CommunicationEntry]
     let skippedRecords: Int
+    let skippedPointRecords: Int
 }
 
 private struct HistoryReader {
@@ -118,15 +122,20 @@ private struct HistoryReader {
         defer { sqlite3_close(database) }
         sqlite3_busy_timeout(database, 2_000)
 
-        var skipped = 0
-        let devices = try loadDevices(database, encryptionKey, skipped: &skipped)
-        let points = try loadPoints(database, encryptionKey, skipped: &skipped)
-        let communications = try loadCommunications(database, encryptionKey, skipped: &skipped)
+        var skippedDevices = 0
+        var skippedPoints = 0
+        var skippedCommunications = 0
+        let devices = try loadDevices(database, encryptionKey, skipped: &skippedDevices)
+        let points = try loadPoints(database, encryptionKey, skipped: &skippedPoints)
+        let communications = try loadCommunications(
+            database, encryptionKey, skipped: &skippedCommunications
+        )
         return HistorySnapshot(
             devices: devices,
             points: points,
             communications: communications,
-            skippedRecords: skipped
+            skippedRecords: skippedDevices + skippedPoints + skippedCommunications,
+            skippedPointRecords: skippedPoints
         )
     }
 
@@ -151,8 +160,10 @@ private struct HistoryReader {
         _ key: SymmetricKey,
         skipped: inout Int
     ) throws -> [TrackedDevice] {
+        let availability = columnExists("is_available", table: "devices", database: database)
+            ? "is_available" : "1"
         let sql = """
-        SELECT device_key, nonce, ciphertext, last_seen_ms
+        SELECT device_key, nonce, ciphertext, last_seen_ms, \(availability)
         FROM devices ORDER BY last_seen_ms DESC
         """
         var statement: OpaquePointer?
@@ -191,7 +202,8 @@ private struct HistoryReader {
                         deviceKey: deviceKey,
                         name: name,
                         deviceType: deviceType,
-                        lastSeen: lastSeen
+                        lastSeen: lastSeen,
+                        isAvailable: sqlite3_column_int(statement, 4) != 0
                     )
                 )
             } catch {
@@ -348,6 +360,21 @@ private struct HistoryReader {
         }
         guard bindResult == SQLITE_OK else { return false }
         return sqlite3_step(statement) == SQLITE_ROW
+    }
+
+    private func columnExists(
+        _ name: String, table: String, database: OpaquePointer
+    ) -> Bool {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, "PRAGMA table_info(\(table))", -1, &statement, nil)
+            == SQLITE_OK,
+            let statement
+        else { return false }
+        defer { sqlite3_finalize(statement) }
+        while sqlite3_step(statement) == SQLITE_ROW {
+            if text(statement, 1) == name { return true }
+        }
+        return false
     }
 
     private func number(_ value: Any?) -> Double? {

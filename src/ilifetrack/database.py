@@ -12,6 +12,8 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any, Self
 
+from cryptography.exceptions import InvalidTag
+
 from .crypto import CryptoBox
 from .models import CommunicationSnapshot, DeviceSnapshot, LocationSnapshot
 
@@ -21,7 +23,8 @@ CREATE TABLE IF NOT EXISTS devices (
     nonce BLOB NOT NULL,
     ciphertext BLOB NOT NULL,
     first_seen_ms INTEGER NOT NULL,
-    last_seen_ms INTEGER NOT NULL
+    last_seen_ms INTEGER NOT NULL,
+    is_available INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS points (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,6 +92,7 @@ class HistoryDatabase:
         self.connection = sqlite3.connect(database_path)
         self.connection.row_factory = sqlite3.Row
         self.connection.executescript(SCHEMA)
+        self._migrate_schema()
         # DELETE mode lets the signed GUI open a truly read-only connection without
         # needing write access to a shared-memory sidecar. There is only one writer.
         self.connection.execute("PRAGMA journal_mode=DELETE")
@@ -97,6 +101,17 @@ class HistoryDatabase:
         self.connection.execute("PRAGMA synchronous=FULL")
         self.connection.commit()
         database_path.chmod(0o600)
+
+    def _migrate_schema(self) -> None:
+        device_columns = {
+            str(row["name"])
+            for row in self.connection.execute("PRAGMA table_info(devices)")
+        }
+        if "is_available" not in device_columns:
+            self.connection.execute(
+                "ALTER TABLE devices ADD COLUMN is_available INTEGER NOT NULL DEFAULT 1"
+            )
+            self.connection.commit()
 
     def close(self) -> None:
         self.connection.close()
@@ -156,16 +171,28 @@ class HistoryDatabase:
         nonce, ciphertext = self.crypto.encrypt_json(payload, aad)
         self.connection.execute(
             """
-            INSERT INTO devices(device_key, nonce, ciphertext, first_seen_ms, last_seen_ms)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO devices(
+                device_key, nonce, ciphertext, first_seen_ms, last_seen_ms, is_available
+            )
+            VALUES (?, ?, ?, ?, ?, 1)
             ON CONFLICT(device_key) DO UPDATE SET
                 nonce=excluded.nonce,
                 ciphertext=excluded.ciphertext,
-                last_seen_ms=excluded.last_seen_ms
+                last_seen_ms=excluded.last_seen_ms,
+                is_available=1
             """,
             (device_key, nonce, ciphertext, seen_at_ms, seen_at_ms),
         )
         return device_key
+
+    def sync_devices(
+        self, devices: Iterable[DeviceSnapshot], seen_at_ms: int
+    ) -> list[str]:
+        """Synchronize the current Find My list without deleting archived history."""
+        self.connection.execute("UPDATE devices SET is_available=0")
+        available_keys = [self.upsert_device(device, seen_at_ms) for device in devices]
+        self.connection.commit()
+        return available_keys
 
     def insert_point(self, snapshot: LocationSnapshot) -> bool:
         self._validate_location(snapshot)
@@ -366,15 +393,38 @@ class HistoryDatabase:
     def list_devices(self) -> list[dict[str, Any]]:
         result = []
         for row in self.connection.execute(
-            "SELECT device_key, nonce, ciphertext, last_seen_ms FROM devices ORDER BY device_key"
+            """
+            SELECT device_key, nonce, ciphertext, last_seen_ms, is_available
+            FROM devices ORDER BY device_key
+            """
         ):
             aad = f"device:{row['device_key']}".encode("ascii")
             payload = self.crypto.decrypt_json(row["nonce"], row["ciphertext"], aad)
             payload.update(
-                device_key=row["device_key"], last_seen_ms=row["last_seen_ms"]
+                device_key=row["device_key"],
+                last_seen_ms=row["last_seen_ms"],
+                is_available=bool(row["is_available"]),
             )
             result.append(payload)
         return result
+
+    def readable_device_names(self) -> dict[str, str]:
+        names: dict[str, str] = {}
+        for row in self.connection.execute(
+            "SELECT device_key, nonce, ciphertext FROM devices"
+        ):
+            try:
+                payload = self.crypto.decrypt_json(
+                    row["nonce"],
+                    row["ciphertext"],
+                    f"device:{row['device_key']}".encode("ascii"),
+                )
+            except (InvalidTag, UnicodeDecodeError, json.JSONDecodeError, TypeError):
+                continue
+            name = payload.get("name")
+            if isinstance(name, str) and name:
+                names[str(row["device_key"])] = name
+        return names
 
     def clear_history(
         self,
@@ -505,6 +555,9 @@ class HistoryDatabase:
                     ),
                 }
             )
+        device_names = self.readable_device_names()
+        for status in device_statuses:
+            status["device_name"] = device_names.get(status["device_key"])
         communication_row = self.connection.execute(
             """
             SELECT COUNT(*) AS total,

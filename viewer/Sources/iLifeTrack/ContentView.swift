@@ -273,6 +273,11 @@ struct MapBrowserView: View {
                         Text(device.deviceType)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        if !device.isAvailable {
+                            Text("已从“查找”移除 · 历史轨迹保留")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
                 .tag(device.deviceKey)
@@ -295,6 +300,14 @@ struct MapBrowserView: View {
                 "无法读取轨迹",
                 systemImage: "exclamationmark.triangle",
                 description: Text(errorMessage)
+            )
+        } else if store.points.isEmpty && store.skippedPointRecords > 0 {
+            ContentUnavailableView(
+                "旧轨迹无法解密",
+                systemImage: "key.slash",
+                description: Text(
+                    "数据库中有 \(store.skippedPointRecords) 个位置点使用已经不在钥匙串中的旧密钥加密。"
+                )
             )
         } else if selectedDevice == nil {
             ContentUnavailableView("选择一台设备", systemImage: "location")

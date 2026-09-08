@@ -40,12 +40,56 @@ def test_database_encrypts_and_deduplicates(tmp_path):
         listed = database.list_devices()
         assert listed[0]["name"] == "Private Phone"
         assert listed[0]["device_key"] == device_key
+        assert listed[0]["is_available"] is True
+        assert database.dashboard()["device_statuses"][0]["device_name"] == (
+            "Private Phone"
+        )
 
     raw_file = target.read_bytes()
     assert b"secret-device-id" not in raw_file
     assert b"Private Phone" not in raw_file
     assert b"31.2304" not in raw_file
     assert b"121.4737" not in raw_file
+
+
+def test_device_sync_marks_removed_devices_unavailable_without_deleting_history(
+    tmp_path,
+):
+    target = tmp_path / "history.sqlite3"
+    box = CryptoBox.from_master_key(b"a" * 32)
+    first = DeviceSnapshot("first", "First", "iPhone", 0.5, None)
+    second = DeviceSnapshot("second", "Second", "Mac", 0.5, None)
+
+    with HistoryDatabase(target, box) as database:
+        database.sync_devices([first, second], 1_000)
+        database.sync_devices([second], 2_000)
+        devices = {item["name"]: item for item in database.list_devices()}
+
+    assert devices["First"]["is_available"] is False
+    assert devices["Second"]["is_available"] is True
+
+
+def test_dashboard_tolerates_rows_encrypted_with_an_unavailable_old_key(tmp_path):
+    target = tmp_path / "history.sqlite3"
+    location = make_location()
+    with HistoryDatabase(target, CryptoBox.from_master_key(b"o" * 32)) as database:
+        database.upsert_device(
+            DeviceSnapshot(
+                location.device_id,
+                location.name,
+                location.device_type,
+                location.battery_level,
+                location,
+            ),
+            location.fetched_at_ms,
+        )
+        database.insert_point(location)
+        database.connection.commit()
+
+    with HistoryDatabase(target, CryptoBox.from_master_key(b"n" * 32)) as database:
+        status = database.dashboard()["device_statuses"][0]
+
+    assert status["device_name"] is None
 
 
 def test_status_and_movement_coverage(tmp_path):

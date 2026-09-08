@@ -112,13 +112,14 @@ def run_auth_bridge(
         except ConfigurationError:
             config = Config()
         config.apple_id = apple_id
-        save_config(selected_paths.config, config)
 
         with HistoryDatabase(selected_paths.database, crypto) as database:
             now_ms = int(time.time() * 1000)
-            for device in devices:
-                database.upsert_device(device, now_ms)
-            database.connection.commit()
+            available = set(database.sync_devices(devices, now_ms))
+            config.selected_device_keys = [
+                key for key in config.selected_device_keys if key in available
+            ]
+        save_config(selected_paths.config, config)
         _emit(output_stream, {"event": "authenticated", "device_count": len(devices)})
         return 0
     except (EOFError, json.JSONDecodeError):

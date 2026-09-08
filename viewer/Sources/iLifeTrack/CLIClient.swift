@@ -182,6 +182,7 @@ struct BackupStatus: Decodable, Sendable {
 
 struct DeviceRecordingStatus: Decodable, Sendable, Identifiable {
     let deviceKey: String
+    let deviceName: String?
     let lastLocationMS: Int64
     let lastFetchedMS: Int64
     let locationLagSeconds: Int64
@@ -190,6 +191,7 @@ struct DeviceRecordingStatus: Decodable, Sendable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case deviceKey = "device_key"
+        case deviceName = "device_name"
         case lastLocationMS = "last_location_ms"
         case lastFetchedMS = "last_fetched_ms"
         case locationLagSeconds = "location_lag_seconds"

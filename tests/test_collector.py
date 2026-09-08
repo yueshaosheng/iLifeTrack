@@ -60,3 +60,27 @@ def test_collector_only_records_selected_device(tmp_path):
     assert result.selected_count == 1
     assert result.new_points == 1
     assert count == 1
+
+
+def test_collector_reconciles_selection_with_current_find_my_devices(tmp_path):
+    box = CryptoBox.from_master_key(b"r" * 32)
+    observed = []
+    with HistoryDatabase(tmp_path / "history.sqlite3", box) as database:
+        current = DeviceSnapshot("current", "Current", "Mac", 0.7, None)
+        current_key = database.device_key("current")
+        removed_key = database.device_key("removed")
+
+        def reconcile(available):
+            observed.append(available)
+            return [key for key in (current_key, removed_key) if key in available]
+
+        collector = Collector(
+            FakeProvider([current]),
+            database,
+            [current_key, removed_key],
+            reconcile_selection=reconcile,
+        )
+        result = collector.collect_once()
+
+    assert observed == [{current_key}]
+    assert result.selected_count == 1

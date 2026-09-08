@@ -256,7 +256,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise
             if args.command == "devices":
                 assert provider is not None
-                return _devices(provider, database, config)
+                return _devices(provider, database, paths, config)
             if args.command == "select":
                 assert provider is not None
                 return _select(
@@ -268,6 +268,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     database,
                     config.selected_device_keys,
                     retention_days=config.retention_days,
+                    reconcile_selection=lambda available: _reconciled_selection(
+                        config, available, paths
+                    ),
                 )
                 if provider is not None
                 else None
@@ -339,15 +342,22 @@ def _auth(paths: AppPaths, apple_id_argument: str | None) -> int:
     save_config(paths.config, config)
     with HistoryDatabase(paths.database, crypto) as database:
         print("认证成功。当前可见设备：")
-        _refresh_and_print_devices(provider, database, config)
+        available = _refresh_and_print_devices(provider, database, config)
+        _reconcile_selected_devices(config, set(available), paths)
     print("下一步运行：ilifetrack select --all（或指定设备短标识）")
     return 0
 
 
 def _devices(
-    provider: ICloudProvider, database: HistoryDatabase, config: Config
+    provider: ICloudProvider,
+    database: HistoryDatabase,
+    paths: AppPaths,
+    config: Config,
 ) -> int:
-    _refresh_and_print_devices(provider, database, config)
+    available = _refresh_and_print_devices(provider, database, config)
+    removed = _reconcile_selected_devices(config, set(available), paths)
+    if removed:
+        print(f"已停止记录 {removed} 台不再出现在“查找”中的设备")
     return 0
 
 
@@ -356,19 +366,35 @@ def _refresh_and_print_devices(
 ) -> list[str]:
     now_ms = int(time.time() * 1000)
     devices = provider.fetch_devices(now_ms)
-    keys = []
-    for device in devices:
-        device_key = database.upsert_device(device, now_ms)
-        keys.append(device_key)
+    keys = database.sync_devices(devices, now_ms)
+    for device, device_key in zip(devices, keys, strict=True):
         marker = "*" if device_key in config.selected_device_keys else " "
         location_state = "有位置" if device.location else "无位置"
         print(
             f"{marker} {device_key}  {device.device_type}  {device.name}  {location_state}"
         )
-    database.connection.commit()
     if not devices:
         print("没有发现可查询的设备")
     return keys
+
+
+def _reconcile_selected_devices(
+    config: Config, available_keys: set[str], paths: AppPaths
+) -> int:
+    previous = config.selected_device_keys
+    selected = [key for key in previous if key in available_keys]
+    removed = len(previous) - len(selected)
+    if removed:
+        config.selected_device_keys = selected
+        save_config(paths.config, config)
+    return removed
+
+
+def _reconciled_selection(
+    config: Config, available_keys: set[str], paths: AppPaths
+) -> list[str]:
+    _reconcile_selected_devices(config, available_keys, paths)
+    return config.selected_device_keys
 
 
 def _select(
@@ -387,8 +413,6 @@ def _select(
         unknown = sorted(set(selected) - set(available))
         if unknown:
             raise ConfigurationError(f"Unknown device key: {', '.join(unknown)}")
-    if not selected:
-        raise ConfigurationError("Select at least one device")
     config.selected_device_keys = selected
     save_config(paths.config, config)
     print(f"已选择 {len(selected)} 台设备")

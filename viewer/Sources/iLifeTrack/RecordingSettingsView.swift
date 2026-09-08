@@ -33,8 +33,11 @@ struct RecordingSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("完成") { dismiss() }
+                Button("完成") {
+                    Task { await saveSelectionAndDismiss() }
+                }
                     .keyboardShortcut(.defaultAction)
+                    .disabled(recording.isBusy)
             }
             .padding(20)
 
@@ -91,6 +94,14 @@ struct RecordingSettingsView: View {
                         }
                         LabeledContent("已保存轨迹") {
                             Text("\(dashboard.totalPoints) 个位置点")
+                        }
+                        if store.skippedPointRecords > 0 {
+                            Label(
+                                "其中 \(store.skippedPointRecords) 个旧位置点无法用当前钥匙串密钥解密",
+                                systemImage: "key.slash"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.orange)
                         }
                         if dashboard.historyStartMS != nil {
                             LabeledContent("历史范围") {
@@ -177,11 +188,11 @@ struct RecordingSettingsView: View {
                 }
 
                 Section("记录设备") {
-                    if store.devices.isEmpty {
-                        Text("认证后即可选择设备。")
+                    if availableDevices.isEmpty {
+                        Text("当前“查找”中没有可记录的设备。")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(store.devices) { device in
+                        ForEach(availableDevices) { device in
                             Toggle(isOn: selectionBinding(for: device.deviceKey)) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(device.name)
@@ -494,7 +505,7 @@ struct RecordingSettingsView: View {
             }
         }
         .onChange(of: recording.selectedDeviceKeys) { _, newValue in
-            draftSelection = newValue
+            draftSelection = newValue.intersection(availableDeviceKeys)
         }
         .alert("永久清除匹配的轨迹？", isPresented: $showingClearConfirmation) {
             Button("取消", role: .cancel) {}
@@ -556,7 +567,7 @@ struct RecordingSettingsView: View {
     private func syncDrafts() {
         syncIntervalDraft(recording.intervalSeconds)
         draftRetention = recording.retentionDays ?? 0
-        draftSelection = recording.selectedDeviceKeys
+        draftSelection = recording.selectedDeviceKeys.intersection(availableDeviceKeys)
         if !initializedClearRange, let dashboard = recording.dashboard {
             clearStart = dashboard.historyStartMS.map { date(from: $0) }
                 ?? Date().addingTimeInterval(-30 * 86_400)
@@ -580,7 +591,32 @@ struct RecordingSettingsView: View {
     }
 
     private func deviceName(for deviceKey: String) -> String {
-        store.devices.first { $0.deviceKey == deviceKey }?.name ?? "设备 \(deviceKey.prefix(6))"
+        store.devices.first { $0.deviceKey == deviceKey }?.name
+            ?? recording.dashboard?.deviceStatuses.first {
+                $0.deviceKey == deviceKey
+            }?.deviceName
+            ?? "旧轨迹设备（名称无法解密）"
+    }
+
+    private var availableDevices: [TrackedDevice] {
+        store.devices.filter(\.isAvailable)
+    }
+
+    private var availableDeviceKeys: Set<String> {
+        Set(availableDevices.map(\.deviceKey))
+    }
+
+    @MainActor
+    private func saveSelectionAndDismiss() async {
+        let selection = draftSelection.intersection(availableDeviceKeys)
+        guard selection != recording.selectedDeviceKeys else {
+            dismiss()
+            return
+        }
+        await recording.applySelection(selection)
+        if recording.selectedDeviceKeys == selection {
+            dismiss()
+        }
     }
 
     private var clearButtonTitle: String {
