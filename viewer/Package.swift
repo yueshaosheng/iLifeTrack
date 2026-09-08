@@ -3,22 +3,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "LifeTrack",
+    name: "iLifeTrack",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "LifeTrack", targets: ["LifeTrack"])
+        .executable(name: "iLifeTrack", targets: ["iLifeTrack"])
     ],
     targets: [
         .executableTarget(
-            name: "LifeTrack",
+            name: "iLifeTrack",
             linkerSettings: [
                 .linkedFramework("Security"),
                 .linkedLibrary("sqlite3"),
             ]
         ),
         .testTarget(
-            name: "LifeTrackTests",
-            dependencies: ["LifeTrack"]
+            name: "iLifeTrackTests",
+            dependencies: ["iLifeTrack"]
         ),
     ]
 )

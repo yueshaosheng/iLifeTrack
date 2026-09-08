@@ -1,7 +1,7 @@
-from lifetrack.collector import Collector
-from lifetrack.crypto import CryptoBox
-from lifetrack.database import HistoryDatabase
-from lifetrack.models import DeviceSnapshot, LocationSnapshot
+from ilifetrack.collector import Collector
+from ilifetrack.crypto import CryptoBox
+from ilifetrack.database import HistoryDatabase
+from ilifetrack.models import DeviceSnapshot, LocationSnapshot
 
 
 class FakeProvider:

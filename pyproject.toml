@@ -3,8 +3,8 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lifetrack"
-version = "0.5.1"
+name = "ilifetrack"
+version = "0.5.2"
 description = "Private macOS archive for Find My locations and local communications"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -19,7 +19,7 @@ dependencies = [
 dev = ["pyinstaller>=6,<7", "pytest>=8,<9", "ruff>=0.8,<1"]
 
 [project.scripts]
-lifetrack = "lifetrack.cli:main"
+ilifetrack = "ilifetrack.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

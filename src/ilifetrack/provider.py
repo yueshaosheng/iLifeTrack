@@ -131,7 +131,7 @@ def discard_stale_auth_handshake(api: Any) -> None:
 
 def _install_srp_header_refresh(session_class: type) -> None:
     """Carry Apple's fresh signin/init state into the signin/complete request."""
-    if getattr(session_class, "_lifetrack_srp_header_refresh", False):
+    if getattr(session_class, "_ilifetrack_srp_header_refresh", False):
         return
     original_request = session_class.request
 
@@ -148,7 +148,7 @@ def _install_srp_header_refresh(session_class: type) -> None:
         return response
 
     session_class.request = request_with_refreshed_headers
-    session_class._lifetrack_srp_header_refresh = True
+    session_class._ilifetrack_srp_header_refresh = True
 
 
 def refresh_api_credentials(api: Any) -> None:

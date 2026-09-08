@@ -1,8 +1,8 @@
 import sqlite3
 
-from lifetrack.communications import CommunicationCollector, MacCommunicationSource
-from lifetrack.crypto import CryptoBox
-from lifetrack.database import HistoryDatabase
+from ilifetrack.communications import CommunicationCollector, MacCommunicationSource
+from ilifetrack.crypto import CryptoBox
+from ilifetrack.database import HistoryDatabase
 
 
 def create_messages_database(path):

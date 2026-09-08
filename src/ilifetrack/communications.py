@@ -46,7 +46,7 @@ class MacCommunicationSource:
                     connection.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone()
             except (OSError, sqlite3.Error) as exc:
                 raise CommunicationAccessError(
-                    f"无法读取{_source_title(source)}数据库。请为 LifeTrack 开启完全磁盘访问权限。"
+                    f"无法读取{_source_title(source)}数据库。请为 iLifeTrack 开启完全磁盘访问权限。"
                 ) from exc
 
     def has_access(self) -> bool:
@@ -95,7 +95,7 @@ class MacCommunicationSource:
                 rows = list(connection.execute(sql, (cursor,)))
         except (OSError, sqlite3.Error) as exc:
             raise CommunicationAccessError(
-                "无法读取信息数据库。请确认 LifeTrack 已获得完全磁盘访问权限。"
+                "无法读取信息数据库。请确认 iLifeTrack 已获得完全磁盘访问权限。"
             ) from exc
 
         records: list[CommunicationSnapshot] = []
@@ -156,7 +156,7 @@ class MacCommunicationSource:
                 rows = list(connection.execute(sql, (cursor,)))
         except (OSError, sqlite3.Error) as exc:
             raise CommunicationAccessError(
-                "无法读取通话历史数据库。请确认 LifeTrack 已获得完全磁盘访问权限。"
+                "无法读取通话历史数据库。请确认 iLifeTrack 已获得完全磁盘访问权限。"
             ) from exc
 
         records: list[CommunicationSnapshot] = []
@@ -200,7 +200,7 @@ class MacCommunicationSource:
                 ).fetchone()
         except (OSError, sqlite3.Error) as exc:
             raise CommunicationAccessError(
-                f"无法读取{_source_title(table)}数据库。请为 LifeTrack 开启完全磁盘访问权限。"
+                f"无法读取{_source_title(table)}数据库。请为 iLifeTrack 开启完全磁盘访问权限。"
             ) from exc
         return int(row[0])
 

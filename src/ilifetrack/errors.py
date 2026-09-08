@@ -1,25 +1,25 @@
 """Domain errors that are safe to classify without logging sensitive payloads."""
 
 
-class LifeTrackError(Exception):
+class ILifeTrackError(Exception):
     """Base error."""
 
 
-class ConfigurationError(LifeTrackError):
+class ConfigurationError(ILifeTrackError):
     """The local configuration is incomplete or invalid."""
 
 
-class AuthenticationRequired(LifeTrackError):
+class AuthenticationRequired(ILifeTrackError):
     """The iCloud session is absent, invalid, or requires user interaction."""
 
 
-class ProviderNetworkError(LifeTrackError):
+class ProviderNetworkError(ILifeTrackError):
     """The provider could not be reached."""
 
 
-class ProviderResponseError(LifeTrackError):
+class ProviderResponseError(ILifeTrackError):
     """The provider returned an unsupported or invalid response."""
 
 
-class CommunicationAccessError(LifeTrackError):
+class CommunicationAccessError(ILifeTrackError):
     """The local Messages or call-history database is not readable."""

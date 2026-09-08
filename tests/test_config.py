@@ -3,8 +3,8 @@ import stat
 
 import pytest
 
-from lifetrack.config import Config, load_config, save_config
-from lifetrack.errors import ConfigurationError
+from ilifetrack.config import Config, load_config, save_config
+from ilifetrack.errors import ConfigurationError
 
 
 def test_config_round_trip_and_private_permissions(tmp_path):

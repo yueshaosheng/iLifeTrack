@@ -2,7 +2,7 @@ import Foundation
 import SQLite3
 import UserNotifications
 
-enum LifeTrackNotifications {
+enum ILifeTrackNotifications {
     static func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
@@ -23,15 +23,15 @@ enum LifeTrackNotifications {
     static func pollMessage(outcome: String) -> (title: String, body: String)? {
         switch outcome {
         case "auth_required":
-            ("LifeTrack 需要重新认证", "Apple 账户会话已失效，请打开 LifeTrack 完成认证。")
+            ("iLifeTrack 需要重新认证", "Apple 账户会话已失效，请打开 iLifeTrack 完成认证。")
         case "network_error":
-            ("LifeTrack 暂时无法联网", "位置采集遇到网络错误，后台将自动延迟重试。")
+            ("iLifeTrack 暂时无法联网", "位置采集遇到网络错误，后台将自动延迟重试。")
         case "provider_error":
-            ("LifeTrack 无法读取位置", "Apple 位置接口返回异常，后台将自动重试。")
+            ("iLifeTrack 无法读取位置", "Apple 位置接口返回异常，后台将自动重试。")
         case "internal_error":
-            ("LifeTrack 后台发生错误", "位置采集遇到内部错误，请打开应用查看运行状态。")
+            ("iLifeTrack 后台发生错误", "位置采集遇到内部错误，请打开应用查看运行状态。")
         case "no_selection":
-            ("LifeTrack 没有记录设备", "请打开应用并至少选择一台需要记录的设备。")
+            ("iLifeTrack 没有记录设备", "请打开应用并至少选择一台需要记录的设备。")
         default:
             nil
         }
@@ -41,11 +41,11 @@ enum LifeTrackNotifications {
         switch outcome {
         case "permission_required":
             (
-                "LifeTrack 无法读取通讯记录",
-                "请在系统设置中为 LifeTrack 开启完全磁盘访问权限。"
+                "iLifeTrack 无法读取通讯记录",
+                "请在系统设置中为 iLifeTrack 开启完全磁盘访问权限。"
             )
         case "internal_error":
-            ("LifeTrack 通讯归档异常", "请打开应用查看通讯归档运行状态。")
+            ("iLifeTrack 通讯归档异常", "请打开应用查看通讯归档运行状态。")
         default:
             nil
         }
@@ -61,14 +61,14 @@ private struct BackgroundStatusSnapshot {
 
 final class BackgroundStatusMonitor: @unchecked Sendable {
     private let databasePath: String
-    private let queue = DispatchQueue(label: "com.lifetrack.status-monitor")
+    private let queue = DispatchQueue(label: "com.ilifetrack.status-monitor")
     private var timer: DispatchSourceTimer?
     private var previous = BackgroundStatusSnapshot()
 
     init() {
         databasePath = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(
-                "Library/Application Support/LifeTrack/history.sqlite3"
+                "Library/Application Support/iLifeTrack/history.sqlite3"
             ).path
     }
 
@@ -103,10 +103,10 @@ final class BackgroundStatusMonitor: @unchecked Sendable {
         if current.pollID > previous.pollID,
            current.pollOutcome != previous.pollOutcome,
            let outcome = current.pollOutcome,
-           let message = LifeTrackNotifications.pollMessage(outcome: outcome)
+           let message = ILifeTrackNotifications.pollMessage(outcome: outcome)
         {
-            LifeTrackNotifications.post(
-                identifier: "lifetrack.poll.\(outcome)",
+            ILifeTrackNotifications.post(
+                identifier: "ilifetrack.poll.\(outcome)",
                 title: message.title,
                 body: message.body
             )
@@ -114,10 +114,10 @@ final class BackgroundStatusMonitor: @unchecked Sendable {
         if current.communicationScanMS > previous.communicationScanMS,
            current.communicationOutcome != previous.communicationOutcome,
            let outcome = current.communicationOutcome,
-           let message = LifeTrackNotifications.communicationMessage(outcome: outcome)
+           let message = ILifeTrackNotifications.communicationMessage(outcome: outcome)
         {
-            LifeTrackNotifications.post(
-                identifier: "lifetrack.communication.\(outcome)",
+            ILifeTrackNotifications.post(
+                identifier: "ilifetrack.communication.\(outcome)",
                 title: message.title,
                 body: message.body
             )

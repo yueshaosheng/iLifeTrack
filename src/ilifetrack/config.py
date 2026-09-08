@@ -35,7 +35,7 @@ def load_config(config_path: Path) -> Config:
     try:
         payload = json.loads(config_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise ConfigurationError("Run `lifetrack auth` first") from exc
+        raise ConfigurationError("Run `ilifetrack auth` first") from exc
     except (OSError, json.JSONDecodeError) as exc:
         raise ConfigurationError("The local configuration cannot be read") from exc
     try:

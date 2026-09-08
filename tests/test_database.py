@@ -1,6 +1,6 @@
-from lifetrack.crypto import CryptoBox
-from lifetrack.database import HistoryDatabase
-from lifetrack.models import DeviceSnapshot, LocationSnapshot
+from ilifetrack.crypto import CryptoBox
+from ilifetrack.database import HistoryDatabase
+from ilifetrack.models import DeviceSnapshot, LocationSnapshot
 
 
 def make_location(source_at_ms=1_700_000_000_000, fetched_at_ms=1_700_000_001_000):

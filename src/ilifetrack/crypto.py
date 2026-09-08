@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from keyring.backends.macOS import Keyring as MacOSKeyring
 
-KEYRING_SERVICE = "com.lifetrack.app"
+KEYRING_SERVICE = "com.ilifetrack.app"
 KEYRING_ACCOUNT = "history-master-key-v1"
 # This byte sequence is the stable v1 database-format salt. Keep it unchanged so
 # existing encrypted history remains readable after application renames.

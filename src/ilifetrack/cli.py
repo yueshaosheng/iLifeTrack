@@ -15,7 +15,7 @@ from .communications import CommunicationCollector, MacCommunicationSource
 from .config import Config, load_config, save_config
 from .crypto import CryptoBox
 from .database import HistoryDatabase
-from .errors import AuthenticationRequired, ConfigurationError, LifeTrackError
+from .errors import AuthenticationRequired, ConfigurationError, ILifeTrackError
 from .gui_bridge import run_auth_bridge
 from .paths import AppPaths
 from .provider import ICloudProvider
@@ -25,7 +25,7 @@ from .service import uninstall as uninstall_agent
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="lifetrack")
+    parser = argparse.ArgumentParser(prog="ilifetrack")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     auth = subparsers.add_parser(
@@ -245,7 +245,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     provider = None
                 elif args.command == "run":
                     print(
-                        "iCloud 会话已失效，请重新运行 lifetrack auth",
+                        "iCloud 会话已失效，请重新运行 ilifetrack auth",
                         file=sys.stderr,
                     )
                     # A clean exit prevents launchd from repeatedly attempting a
@@ -291,14 +291,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 if reason == "auth_required":
                     print(
-                        "iCloud 会话已失效，请重新运行 lifetrack auth",
+                        "iCloud 会话已失效，请重新运行 ilifetrack auth",
                         file=sys.stderr,
                     )
                 return 0
     except AuthenticationRequired:
-        print("iCloud 认证无效，请在本机重新运行 lifetrack auth", file=sys.stderr)
+        print("iCloud 认证无效，请在本机重新运行 ilifetrack auth", file=sys.stderr)
         return 2
-    except (ConfigurationError, LifeTrackError, ValueError, RuntimeError) as exc:
+    except (ConfigurationError, ILifeTrackError, ValueError, RuntimeError) as exc:
         print(f"错误：{exc}", file=sys.stderr)
         return 2
     return 1
@@ -325,7 +325,7 @@ def _auth(paths: AppPaths, apple_id_argument: str | None) -> int:
     with HistoryDatabase(paths.database, crypto) as database:
         print("认证成功。当前可见设备：")
         _refresh_and_print_devices(provider, database, config)
-    print("下一步运行：lifetrack select --all（或指定设备短标识）")
+    print("下一步运行：ilifetrack select --all（或指定设备短标识）")
     return 0
 
 
@@ -412,11 +412,11 @@ def _status(database: HistoryDatabase, config: Config, hours: float) -> int:
 
 def _open_viewer() -> int:
     project_root = Path(__file__).resolve().parents[2]
-    app_bundle = project_root / "build" / "LifeTrack.app"
+    app_bundle = project_root / "build" / "iLifeTrack.app"
     if not app_bundle.exists():
         raise ConfigurationError("Run ./viewer/build-app.sh before opening the viewer")
     subprocess.run(["open", str(app_bundle)], check=True)
-    print("LifeTrack 已打开")
+    print("iLifeTrack 已打开")
     return 0
 
 

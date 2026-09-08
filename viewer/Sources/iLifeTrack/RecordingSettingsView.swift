@@ -279,7 +279,7 @@ struct RecordingSettingsView: View {
 
                     if recording.dashboard?.fullDiskAccessGranted != true {
                         Text(
-                            "首次使用：在“隐私与安全性 → 完全磁盘访问权限”中加入 LifeTrack "
+                            "首次使用：在“隐私与安全性 → 完全磁盘访问权限”中加入 iLifeTrack "
                                 + "并打开开关，然后返回本应用。"
                         )
                         .font(.caption)
@@ -324,7 +324,7 @@ struct RecordingSettingsView: View {
                             Text("仅通话").tag("call")
                         }
                         HStack {
-                            Text("只影响 LifeTrack 本地归档，不会删除 Apple“信息”或通话历史。")
+                            Text("只影响 iLifeTrack 本地归档，不会删除 Apple“信息”或通话历史。")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
@@ -525,7 +525,7 @@ struct RecordingSettingsView: View {
                 }
             }
         } message: {
-            Text("这不会删除 Apple“信息”或通话历史。LifeTrack 会先创建加密备份，可从数据管理中恢复。")
+            Text("这不会删除 Apple“信息”或通话历史。iLifeTrack 会先创建加密备份，可从数据管理中恢复。")
         }
         .alert("恢复最近的加密备份？", isPresented: $showingRestoreConfirmation) {
             Button("取消", role: .cancel) {}
@@ -536,7 +536,7 @@ struct RecordingSettingsView: View {
                 }
             }
         } message: {
-            Text("整个 LifeTrack 数据库将回到备份时的状态。恢复后新增的轨迹和通讯会被替换，但恢复前会再创建一个安全备份。")
+            Text("整个 iLifeTrack 数据库将回到备份时的状态。恢复后新增的轨迹和通讯会被替换，但恢复前会再创建一个安全备份。")
         }
     }
 
@@ -595,7 +595,7 @@ struct RecordingSettingsView: View {
             ? "\(clearStart.formatted(date: .abbreviated, time: .shortened))至"
                 + clearEnd.formatted(date: .abbreviated, time: .shortened)
             : "全部时间"
-        return "将删除\(device)在\(range)内的轨迹。LifeTrack 会先创建加密备份；后台运行时，新位置仍会继续保存。"
+        return "将删除\(device)在\(range)内的轨迹。iLifeTrack 会先创建加密备份；后台运行时，新位置仍会继续保存。"
     }
 
     private func date(from milliseconds: Int64) -> Date {

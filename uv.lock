@@ -340,8 +340,8 @@ wheels = [
 ]
 
 [[package]]
-name = "lifetrack"
-version = "0.5.1"
+name = "ilifetrack"
+version = "0.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

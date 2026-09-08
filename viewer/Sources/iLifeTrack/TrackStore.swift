@@ -98,12 +98,12 @@ private struct HistorySnapshot {
 }
 
 private struct HistoryReader {
-    private let keyService = "com.lifetrack.app"
+    private let keyService = "com.ilifetrack.app"
     private let keyAccount = "history-master-key-v1"
 
     func load() throws -> HistorySnapshot {
         let databaseURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/LifeTrack/history.sqlite3")
+            .appendingPathComponent("Library/Application Support/iLifeTrack/history.sqlite3")
         guard FileManager.default.fileExists(atPath: databaseURL.path) else {
             throw TrackStoreError.databaseNotFound
         }

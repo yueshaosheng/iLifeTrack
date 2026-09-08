@@ -1,6 +1,6 @@
 import CoreLocation
 import XCTest
-@testable import LifeTrack
+@testable import iLifeTrack
 
 final class CoordinateCorrectionTests: XCTestCase {
     func testAutomaticCorrectionAppliesMainlandDisplayOffset() {

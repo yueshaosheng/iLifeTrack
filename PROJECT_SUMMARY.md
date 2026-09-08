@@ -1,8 +1,8 @@
-# LifeTrack 项目总结
+# iLifeTrack 项目总结
 
 ## 项目定位
 
-LifeTrack 是一个个人使用的 Apple“查找”设备历史轨迹与本机通讯归档工具。
+iLifeTrack 是一个个人使用的 Apple“查找”设备历史轨迹与本机通讯归档工具。
 
 它目前不是 iPhone/iPad App，而是一个运行在 Mac 上的原生 GUI 应用：
 
@@ -55,9 +55,9 @@ macOS launchd
 
 主要代码：
 
-- `viewer/Sources/LifeTrack/ContentView.swift`
-- `viewer/Sources/LifeTrack/RecordingSettingsView.swift`
-- `viewer/Sources/LifeTrack/TrackStore.swift`
+- `viewer/Sources/iLifeTrack/ContentView.swift`
+- `viewer/Sources/iLifeTrack/RecordingSettingsView.swift`
+- `viewer/Sources/iLifeTrack/TrackStore.swift`
 
 ### 后台采集
 
@@ -72,10 +72,10 @@ macOS launchd
 
 主要代码：
 
-- `src/lifetrack/provider.py`
-- `src/lifetrack/collector.py`
-- `src/lifetrack/database.py`
-- `src/lifetrack/crypto.py`
+- `src/ilifetrack/provider.py`
+- `src/ilifetrack/collector.py`
+- `src/ilifetrack/database.py`
+- `src/ilifetrack/crypto.py`
 
 ### 开发质量
 
@@ -90,14 +90,15 @@ macOS launchd
 下面只列出需要维护的源文件。`.venv/`、`build/`、`viewer/.build/`、缓存目录和 `*.egg-info` 都是自动生成内容，不应手动修改，也不需要提交到版本库。
 
 ```text
-LifeTrack/
-├── README.md                       # 用户使用教程
+iLifeTrack/
+├── README.md                       # 中文项目说明（默认）
+├── README_EN.md                    # English documentation
 ├── PROJECT_SUMMARY.md              # 项目架构、维护和升级说明
 ├── pyproject.toml                  # Python 包、依赖、命令入口和工具配置
 ├── uv.lock                         # Python 依赖锁定文件
 ├── packaging/
-│   └── lifetrack_backend.py        # PyInstaller 后台程序入口
-├── src/lifetrack/              # Python 后台与数据层
+│   └── ilifetrack_backend.py       # PyInstaller 后台程序入口
+├── src/ilifetrack/                 # Python 后台与数据层
 │   ├── cli.py                      # 后台命令入口，供 GUI 和 LaunchAgent 调用
 │   ├── collector.py                # 位置采集、通讯轮询、重试和调度
 │   ├── communications.py           # 读取本机信息与通话数据库
@@ -124,10 +125,10 @@ LifeTrack/
     ├── Resources/Info.plist        # App 名称、版本和权限说明
     ├── Resources/AppIcon.svg       # 可维护的应用图标源文件
     ├── Resources/AppIcon.icns      # 打包使用的 macOS 应用图标
-    ├── Sources/LifeTrack/
+    ├── Sources/iLifeTrack/
     │   ├── main.swift              # GUI/后台服务双模式启动入口
     │   ├── BackgroundServiceRunner.swift
-    │   ├── LifeTrackApp.swift
+    │   ├── ILifeTrackApp.swift
     │   ├── ContentView.swift       # 主窗口、地图和标签页
     │   ├── AuthenticationController.swift
     │   ├── RecordingController.swift
@@ -135,9 +136,9 @@ LifeTrack/
     │   ├── CommunicationArchiveView.swift
     │   ├── TrackStore.swift        # 只读数据库、解密和轨迹查询
     │   ├── CoordinateCorrection.swift
-    │   ├── LifeTrackNotifications.swift
+    │   ├── ILifeTrackNotifications.swift
     │   └── CLIClient.swift         # 调用应用内置 Python 后台
-    └── Tests/LifeTrackTests/
+    └── Tests/iLifeTrackTests/
         └── CoordinateCorrectionTests.swift
 ```
 
@@ -187,34 +188,34 @@ swift build --package-path viewer -c release
 
 1. 使用 Swift Release 模式编译原生 GUI。
 2. 使用 PyInstaller `--onedir` 打包 Python 后台、Python 运行时及依赖。
-3. 从矢量源生成标准 `.icns`，组装 `LifeTrack.app`，并将后台放进应用的 `Contents/Resources/backend/`。
+3. 从矢量源生成标准 `.icns`，组装 `iLifeTrack.app`，并将后台放进应用的 `Contents/Resources/backend/`。
 4. 对后台可执行文件和整个 App 进行本机临时签名，并验证签名。
-5. 先输出到项目的 `build/LifeTrack.app`，再安全替换安装到 `/Applications/LifeTrack.app`。
+5. 先输出到项目的 `build/iLifeTrack.app`，再安全替换安装到 `/Applications/iLifeTrack.app`。
 6. 如果后台服务原本已经安装，则用新版本 App 重新生成并启动 LaunchAgent。
 
 最终包内主要结构是：
 
 ```text
-LifeTrack.app/
+iLifeTrack.app/
 └── Contents/
     ├── Info.plist
     ├── MacOS/
-    │   └── LifeTrack                # 原生 GUI 与后台包装入口
+    │   └── iLifeTrack                # 原生 GUI 与后台包装入口
     └── Resources/
         ├── AppIcon.icns
-        └── backend/lifetrack/
-            ├── lifetrack        # Python 后台入口
+        └── backend/ilifetrack/
+            ├── ilifetrack          # Python 后台入口
             └── _internal/           # Python 运行时和依赖库
 ```
 
-因此目标 Mac 不需要单独安装 Python、`uv` 或项目源代码。安装后的 App 与开发目录相互独立；删除项目目录不会影响已安装应用，但不能删除 `~/Library/Application Support/LifeTrack`，否则本地记录和配置会丢失。
+因此目标 Mac 不需要单独安装 Python、`uv` 或项目源代码。安装后的 App 与开发目录相互独立；删除项目目录不会影响已安装应用，但不能删除 `~/Library/Application Support/iLifeTrack`，否则本地记录和配置会丢失。
 
 ### 打包后的检查
 
 ```bash
-plutil -extract CFBundleShortVersionString raw "/Applications/LifeTrack.app/Contents/Info.plist"
-codesign --verify --deep --strict "/Applications/LifeTrack.app"
-file "/Applications/LifeTrack.app/Contents/MacOS/LifeTrack"
+plutil -extract CFBundleShortVersionString raw "/Applications/iLifeTrack.app/Contents/Info.plist"
+codesign --verify --deep --strict "/Applications/iLifeTrack.app"
+file "/Applications/iLifeTrack.app/Contents/MacOS/iLifeTrack"
 ```
 
 当前产物是 Apple Silicon `arm64` App。`build/` 还会包含 PyInstaller 的中间文件，可随时删除并重新生成；用户数据库、密钥、认证会话和配置不在 `build/` 中。
@@ -224,16 +225,18 @@ file "/Applications/LifeTrack.app/Contents/MacOS/LifeTrack"
 后台服务配置位于：
 
 ```text
-~/Library/LaunchAgents/com.lifetrack.app.plist
+~/Library/LaunchAgents/com.ilifetrack.app.plist
 ```
 
-LaunchAgent 启动 `LifeTrack.app/Contents/MacOS/LifeTrack --background-service`，再由主程序运行包内 Python 后台。这样完全磁盘访问权限可以授予 `LifeTrack.app` 本身，同时避免每次 Python 后台重新打包后路径或签名发生变化。
+LaunchAgent 启动 `iLifeTrack.app/Contents/MacOS/iLifeTrack --background-service`，再由主程序运行包内 Python 后台。这样完全磁盘访问权限可以授予 `iLifeTrack.app` 本身，同时避免每次 Python 后台重新打包后路径或签名发生变化。
 
-`build-app.sh` 会在检测到已安装后台服务时自动更新并重启它。重新签名后，macOS 仍有可能要求移除并重新添加“系统设置 → 隐私与安全性 → 完全磁盘访问权限”中的 LifeTrack；通讯归档读取失败时应首先检查此项。
+`build-app.sh` 会在检测到已安装后台服务时自动更新并重启它。重新签名后，macOS 仍有可能要求移除并重新添加“系统设置 → 隐私与安全性 → 完全磁盘访问权限”中的 iLifeTrack；通讯归档读取失败时应首先检查此项。
 
 GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“信息”和通话历史数据库各执行一次只读查询。两者均可读时显示“完全磁盘访问：已授权”并隐藏设置按钮；从系统设置返回应用时会自动刷新。
 
 ### 版本号和依赖更新
+
+当前版本是 **0.5.2（Build 20）**。本次补丁版本用于 iLifeTrack 品牌迁移、图标精简和文档整理；没有把尚未完成的第二阶段功能计入版本承诺。
 
 发布新版本时至少检查：
 
@@ -242,7 +245,7 @@ GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“
 - 修改依赖后重新运行 `uv lock`，并提交更新后的 `uv.lock`。
 - 更新 `README.md`、本总结和相关自动化测试。
 
-应用及其内部组件已统一使用 LifeTrack 命名，包括 Python 包、Application Support 目录、LaunchAgent、钥匙串服务和后台二进制。旧名称仅使用过的加密格式参数保持字节级兼容，以保证已有历史数据无需解密迁移即可继续读取。
+应用及其内部组件已统一使用 iLifeTrack 命名，包括 Python 包、Application Support 目录、LaunchAgent、钥匙串服务和后台二进制。旧版使用过的加密格式参数保持字节级兼容，以保证已有历史数据无需解密迁移即可继续读取。
 
 ### 分发给其他 Mac
 
@@ -293,7 +296,7 @@ GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“
 - 约每 2 秒检查一次 Mac 本地“信息”和通话历史数据库。
 - 支持短信、iMessage、来电和去电的本地查看、筛选与搜索。
 - 系统记录经 iCloud 同步删除时，不联动删除本地归档。
-- 需要为 `LifeTrack.app` 授予 macOS 完全磁盘访问权限。
+- 需要为 `iLifeTrack.app` 授予 macOS 完全磁盘访问权限。
 - 附件文件当前不复制；Mac 离线、休眠或记录未同步到 Mac 时无法保证捕获。
 
 ### 两种时间
@@ -337,7 +340,7 @@ GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“
 本地数据位于：
 
 ```text
-~/Library/Application Support/LifeTrack
+~/Library/Application Support/iLifeTrack
 ```
 
 安全设计包括：
@@ -359,7 +362,7 @@ GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“
 - 后台服务正在运行。
 - 当前间隔为 5 分钟。
 - 最近一次检查时，最近 48 小时采集成功率为 100%。
-- GUI 安装在 `/Applications/LifeTrack.app`。
+- GUI 安装在 `/Applications/iLifeTrack.app`。
 - 图形界面使用教程位于 `README.md`。
 
 运行状态属于动态信息，应以应用当时显示的结果为准。

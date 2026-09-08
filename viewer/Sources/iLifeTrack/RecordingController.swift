@@ -156,7 +156,7 @@ final class RecordingController: ObservableObject {
     }
 
     private func queryRunningState() async -> Bool {
-        let domain = "gui/\(getuid())/com.lifetrack.app"
+        let domain = "gui/\(getuid())/com.ilifetrack.app"
         return (try? await CLIClient.runSystem(
             "/bin/launchctl", arguments: ["print", domain]
         )) != nil

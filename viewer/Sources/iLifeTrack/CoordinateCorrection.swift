@@ -28,7 +28,7 @@ enum CoordinateCorrection {
         }
     }
 
-    // LifeTrack stores the Find My web endpoint's original coordinates. For
+    // iLifeTrack stores the Find My web endpoint's original coordinates. For
     // the Apple map served in mainland China, apply the GCJ-02 display offset
     // without changing the database values.
     static func gcj02ToWGS84(_ coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {

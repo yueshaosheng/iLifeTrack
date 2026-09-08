@@ -1,7 +1,7 @@
 import pytest
 from cryptography.exceptions import InvalidTag
 
-from lifetrack.crypto import CryptoBox, KeyStore
+from ilifetrack.crypto import CryptoBox, KeyStore
 
 
 class MemoryKeyStore(KeyStore):

@@ -1,14 +1,14 @@
 import io
 import json
 
-from lifetrack.crypto import CryptoBox
-from lifetrack.errors import AuthenticationRequired, ProviderNetworkError
-from lifetrack.gui_bridge import (
+from ilifetrack.crypto import CryptoBox
+from ilifetrack.errors import AuthenticationRequired, ProviderNetworkError
+from ilifetrack.gui_bridge import (
     _failure_reason,
     _safe_diagnostic_code,
     run_auth_bridge,
 )
-from lifetrack.paths import AppPaths
+from ilifetrack.paths import AppPaths
 
 
 class FakeAPI:
@@ -37,9 +37,9 @@ def test_gui_auth_bridge_uses_json_lines_and_never_echoes_password(
     monkeypatch, tmp_path
 ):
     app_paths = AppPaths(tmp_path / "state")
-    monkeypatch.setattr("lifetrack.gui_bridge._new_api", lambda *_args: FakeAPI())
+    monkeypatch.setattr("ilifetrack.gui_bridge._new_api", lambda *_args: FakeAPI())
     monkeypatch.setattr(
-        "lifetrack.gui_bridge.CryptoBox.load_or_create",
+        "ilifetrack.gui_bridge.CryptoBox.load_or_create",
         lambda: CryptoBox.from_master_key(b"g" * 32),
     )
     input_stream = io.StringIO(
@@ -89,9 +89,9 @@ def test_gui_auth_bridge_uses_fresh_session_and_replaces_it_only_after_success(
         api.requires_2fa = False
         return api
 
-    monkeypatch.setattr("lifetrack.gui_bridge._new_api", new_api)
+    monkeypatch.setattr("ilifetrack.gui_bridge._new_api", new_api)
     monkeypatch.setattr(
-        "lifetrack.gui_bridge.CryptoBox.load_or_create",
+        "ilifetrack.gui_bridge.CryptoBox.load_or_create",
         lambda: CryptoBox.from_master_key(b"f" * 32),
     )
     input_stream = io.StringIO(
@@ -121,10 +121,10 @@ def test_gui_auth_bridge_does_not_fail_when_2fa_push_cannot_be_sent(
 
     app_paths = AppPaths(tmp_path / "state")
     monkeypatch.setattr(
-        "lifetrack.gui_bridge._new_api", lambda *_args: PushFailureAPI()
+        "ilifetrack.gui_bridge._new_api", lambda *_args: PushFailureAPI()
     )
     monkeypatch.setattr(
-        "lifetrack.gui_bridge.CryptoBox.load_or_create",
+        "ilifetrack.gui_bridge.CryptoBox.load_or_create",
         lambda: CryptoBox.from_master_key(b"p" * 32),
     )
     input_stream = io.StringIO(
@@ -180,11 +180,11 @@ def test_gui_auth_bridge_forces_password_refresh_with_copied_trusted_session(
             )
 
     monkeypatch.setattr(
-        "lifetrack.gui_bridge._new_api",
+        "ilifetrack.gui_bridge._new_api",
         lambda _apple_id, _password, directory: RefreshAPI(directory),
     )
     monkeypatch.setattr(
-        "lifetrack.gui_bridge.CryptoBox.load_or_create",
+        "ilifetrack.gui_bridge.CryptoBox.load_or_create",
         lambda: CryptoBox.from_master_key(b"r" * 32),
     )
     input_stream = io.StringIO(

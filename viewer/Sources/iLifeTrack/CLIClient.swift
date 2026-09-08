@@ -8,11 +8,11 @@ enum CLIClientError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .executableMissing:
-            "找不到 LifeTrack 后端，请重新构建应用。"
+            "找不到 iLifeTrack 后端，请重新构建应用。"
         case let .commandFailed(message):
             message.isEmpty ? "操作失败，请稍后重试。" : message
         case .invalidResponse:
-            "LifeTrack 后端返回了无法识别的响应。"
+            "iLifeTrack 后端返回了无法识别的响应。"
         }
     }
 }
@@ -21,7 +21,7 @@ enum CLIClient {
     static var executableURL: URL {
         if let resources = Bundle.main.resourceURL {
             let bundled = resources
-                .appendingPathComponent("backend/lifetrack/lifetrack")
+                .appendingPathComponent("backend/ilifetrack/ilifetrack")
             if FileManager.default.isExecutableFile(atPath: bundled.path) {
                 return bundled
             }
@@ -29,7 +29,7 @@ enum CLIClient {
         let projectRoot = Bundle.main.bundleURL
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        return projectRoot.appendingPathComponent(".venv/bin/lifetrack")
+        return projectRoot.appendingPathComponent(".venv/bin/ilifetrack")
     }
 
     static var workingDirectory: URL {
@@ -38,7 +38,7 @@ enum CLIClient {
 
     static var configURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/LifeTrack/config.json")
+            .appendingPathComponent("Library/Application Support/iLifeTrack/config.json")
     }
 
     static func run(_ arguments: [String]) async throws -> String {

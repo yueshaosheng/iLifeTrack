@@ -10,13 +10,13 @@ from pathlib import Path
 
 from .paths import AppPaths
 
-LABEL = "com.lifetrack.app"
+LABEL = "com.ilifetrack.app"
 
 
 def current_executable() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve()
-    return Path(sys.executable).parent / "lifetrack"
+    return Path(sys.executable).parent / "ilifetrack"
 
 
 def service_program_arguments() -> list[str]:
@@ -24,7 +24,7 @@ def service_program_arguments() -> list[str]:
     if getattr(sys, "frozen", False):
         for parent in executable.parents:
             if parent.suffix == ".app":
-                app_executable = parent / "Contents" / "MacOS" / "LifeTrack"
+                app_executable = parent / "Contents" / "MacOS" / "iLifeTrack"
                 if app_executable.exists():
                     return [str(app_executable), "--background-service"]
     return [str(executable), "run"]

@@ -3,8 +3,8 @@ from types import ModuleType
 
 import pytest
 
-from lifetrack.errors import ProviderResponseError
-from lifetrack.provider import (
+from ilifetrack.errors import ProviderResponseError
+from ilifetrack.provider import (
     APPLE_AUTH_ENDPOINT,
     CHINA_HOME_ENDPOINT,
     CHINA_SETUP_ENDPOINT,
@@ -41,7 +41,7 @@ def test_interactive_login_triggers_push_before_reading_code(monkeypatch, tmp_pa
         events.append("read")
         return "123456"
 
-    monkeypatch.setattr("lifetrack.provider._new_api", lambda *_args: api)
+    monkeypatch.setattr("ilifetrack.provider._new_api", lambda *_args: api)
     provider = ICloudProvider.interactive_login(
         "user@example.com",
         tmp_path,
@@ -58,7 +58,7 @@ def test_interactive_login_protects_session_files(monkeypatch, tmp_path):
     session_file = tmp_path / "account.session"
     session_file.write_text("secret", encoding="utf-8")
     session_file.chmod(0o644)
-    monkeypatch.setattr("lifetrack.provider._new_api", lambda *_args: api)
+    monkeypatch.setattr("ilifetrack.provider._new_api", lambda *_args: api)
 
     ICloudProvider.interactive_login(
         "user@example.com",
@@ -157,7 +157,7 @@ def test_srp_init_response_headers_are_used_for_complete_request():
             self.session_data = {}
 
     class Session:
-        _lifetrack_srp_header_refresh = False
+        _ilifetrack_srp_header_refresh = False
 
         def __init__(self):
             self.service = Service()

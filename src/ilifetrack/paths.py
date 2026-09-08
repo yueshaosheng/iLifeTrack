@@ -12,7 +12,7 @@ class AppPaths:
 
     @classmethod
     def default(cls) -> "AppPaths":
-        return cls(Path.home() / "Library" / "Application Support" / "LifeTrack")
+        return cls(Path.home() / "Library" / "Application Support" / "iLifeTrack")
 
     @property
     def config(self) -> Path:

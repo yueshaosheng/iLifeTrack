@@ -1,12 +1,12 @@
 import SwiftUI
 
-struct LifeTrackApp: App {
+struct ILifeTrackApp: App {
     init() {
-        LifeTrackNotifications.requestAuthorization()
+        ILifeTrackNotifications.requestAuthorization()
     }
 
     var body: some Scene {
-        WindowGroup("LifeTrack") {
+        WindowGroup("iLifeTrack") {
             ContentView()
                 .frame(minWidth: 920, minHeight: 640)
         }

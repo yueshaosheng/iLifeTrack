@@ -3,7 +3,7 @@ import Foundation
 
 final class BackgroundServiceRunner: @unchecked Sendable {
     private let process = Process()
-    private let signalQueue = DispatchQueue(label: "com.lifetrack.signal-forwarding")
+    private let signalQueue = DispatchQueue(label: "com.ilifetrack.signal-forwarding")
     private let statusMonitor = BackgroundStatusMonitor()
     private var terminationSignal: DispatchSourceSignal?
     private var interruptionSignal: DispatchSourceSignal?
@@ -43,21 +43,21 @@ final class BackgroundServiceRunner: @unchecked Sendable {
             statusMonitor.checkNow()
             finishMonitoring()
             if process.terminationStatus != 0 {
-                LifeTrackNotifications.post(
-                    identifier: "lifetrack.background-stopped",
-                    title: "LifeTrack 后台服务已停止",
+                ILifeTrackNotifications.post(
+                    identifier: "ilifetrack.background-stopped",
+                    title: "iLifeTrack 后台服务已停止",
                     body: "后台组件异常退出，macOS 将尝试重新启动；请打开应用查看状态。"
                 )
             }
             return process.terminationStatus
         } catch {
             finishMonitoring()
-            LifeTrackNotifications.post(
-                identifier: "lifetrack.background-start-failed",
-                title: "LifeTrack 后台服务无法启动",
-                body: "请重新安装 LifeTrack 或打开应用检查运行状态。"
+            ILifeTrackNotifications.post(
+                identifier: "ilifetrack.background-start-failed",
+                title: "iLifeTrack 后台服务无法启动",
+                body: "请重新安装 iLifeTrack 或打开应用检查运行状态。"
             )
-            fputs("LifeTrack background service could not start.\n", stderr)
+            fputs("iLifeTrack background service could not start.\n", stderr)
             return 2
         }
     }
