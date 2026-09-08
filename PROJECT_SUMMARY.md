@@ -189,7 +189,7 @@ swift build --package-path viewer -c release
 2. 使用 PyInstaller `--onedir` 打包 Python 后台、Python 运行时及依赖。
 3. 从矢量源生成标准 `.icns`，组装 `LifeTrack.app`，并将后台放进应用的 `Contents/Resources/backend/`。
 4. 对后台可执行文件和整个 App 进行本机临时签名，并验证签名。
-5. 先输出到项目的 `build/LifeTrack.app`，再安全替换安装到 `~/Applications/LifeTrack.app`。
+5. 先输出到项目的 `build/LifeTrack.app`，再安全替换安装到 `/Applications/LifeTrack.app`。
 6. 如果后台服务原本已经安装，则用新版本 App 重新生成并启动 LaunchAgent。
 
 最终包内主要结构是：
@@ -212,9 +212,9 @@ LifeTrack.app/
 ### 打包后的检查
 
 ```bash
-plutil -extract CFBundleShortVersionString raw "$HOME/Applications/LifeTrack.app/Contents/Info.plist"
-codesign --verify --deep --strict "$HOME/Applications/LifeTrack.app"
-file "$HOME/Applications/LifeTrack.app/Contents/MacOS/LifeTrack"
+plutil -extract CFBundleShortVersionString raw "/Applications/LifeTrack.app/Contents/Info.plist"
+codesign --verify --deep --strict "/Applications/LifeTrack.app"
+file "/Applications/LifeTrack.app/Contents/MacOS/LifeTrack"
 ```
 
 当前产物是 Apple Silicon `arm64` App。`build/` 还会包含 PyInstaller 的中间文件，可随时删除并重新生成；用户数据库、密钥、认证会话和配置不在 `build/` 中。
@@ -359,7 +359,7 @@ GUI 不依赖 macOS 没有对普通应用公开的 TCC 查询 API，而是对“
 - 后台服务正在运行。
 - 当前间隔为 5 分钟。
 - 最近一次检查时，最近 48 小时采集成功率为 100%。
-- GUI 安装在 `~/Applications/LifeTrack.app`。
+- GUI 安装在 `/Applications/LifeTrack.app`。
 - 图形界面使用教程位于 `README.md`。
 
 运行状态属于动态信息，应以应用当时显示的结果为准。

@@ -4,7 +4,7 @@ set -euo pipefail
 script_dir=${0:A:h}
 project_root=${script_dir:h}
 app_bundle="$project_root/build/LifeTrack.app"
-installed_bundle="$HOME/Applications/LifeTrack.app"
+installed_bundle="/Applications/LifeTrack.app"
 backend_dist="$project_root/build/backend-dist"
 backend_work="$project_root/build/backend-work"
 backend_spec="$project_root/build/backend-spec"
@@ -45,8 +45,7 @@ codesign --force --sign - \
 codesign --force --deep --sign - "$app_bundle"
 codesign --verify --deep --strict "$app_bundle"
 
-mkdir -p "$HOME/Applications"
-staged_bundle="$HOME/Applications/.LifeTrack.app.staging"
+staged_bundle="/Applications/.LifeTrack.app.staging"
 rm -rf "$staged_bundle"
 ditto "$app_bundle" "$staged_bundle"
 rm -rf "$installed_bundle"

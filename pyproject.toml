@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lifetrack"
-version = "0.5.0"
+version = "0.5.1"
 description = "Private macOS archive for Find My locations and local communications"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

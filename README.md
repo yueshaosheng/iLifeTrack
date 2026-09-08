@@ -13,7 +13,7 @@ LifeTrack 会在这台 Mac 上定时读取 Apple“查找”中设备的最后�
 应用实际安装在：
 
 ```text
-~/Applications/LifeTrack.app
+/Applications/LifeTrack.app
 ```
 
 这是完整的独立应用包，内部包含 Python 3.12 运行时、iCloud 客户端和后台采集器，不再依赖项目目录或 `.venv`。轨迹数据库和设置仍按 macOS 规范保存在用户的 Application Support 目录中。
@@ -116,7 +116,7 @@ LifeTrack 会在这台 Mac 上定时读取 Apple“查找”中设备的最后�
 4. 回到 LifeTrack。应用会自动重新检查；确认状态变为“已授权”后，设置按钮会自动隐藏。
 5. 点 **启用通讯归档**。
 
-当前应用使用本地临时签名。升级重打包后，如果 LifeTrack 虽然仍显示为开启，但运行状态提示缺少权限，请在完全磁盘访问列表中移除 LifeTrack，再重新加入 `~/Applications/LifeTrack.app`，随后停止并重新开始后台记录。
+当前应用使用本地临时签名。升级重打包后，如果 LifeTrack 虽然仍显示为开启，但运行状态提示缺少权限，请在完全磁盘访问列表中移除 LifeTrack，再重新加入 `/Applications/LifeTrack.app`，随后停止并重新开始后台记录。
 
 首次启用时，LifeTrack 会导入当前仍存在于 Mac“信息”和通话历史数据库中的记录，随后后台约每 2 秒检查一次新增记录；位置采集仍使用单独的分钟级间隔。“导入现有记录”可以随时再次扫描全部系统记录，已经归档的内容会自动去重。
 
