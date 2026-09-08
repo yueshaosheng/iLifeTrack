@@ -1,6 +1,5 @@
 import CryptoKit
 import Foundation
-import Security
 import SQLite3
 
 struct TrackedDevice: Identifiable, Hashable {
@@ -98,9 +97,6 @@ private struct HistorySnapshot {
 }
 
 private struct HistoryReader {
-    private let keyService = "com.ilifetrack.app"
-    private let keyAccount = "history-master-key-v1"
-
     func load() throws -> HistorySnapshot {
         let databaseURL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/iLifeTrack/history.sqlite3")
@@ -108,7 +104,7 @@ private struct HistoryReader {
             throw TrackStoreError.databaseNotFound
         }
 
-        let masterKey = try readMasterKey()
+        let masterKey = try MasterKeyStore.shared.loadOrCreate()
         let encryptionKey = deriveEncryptionKey(masterKey)
         var database: OpaquePointer?
         let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX
@@ -132,34 +128,6 @@ private struct HistoryReader {
             communications: communications,
             skippedRecords: skipped
         )
-    }
-
-    private func readMasterKey() throws -> Data {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: keyService,
-            kSecAttrAccount: keyAccount,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne,
-        ]
-        var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let encodedData = result as? Data,
-              let encoded = String(data: encodedData, encoding: .utf8)
-        else {
-            throw TrackStoreError.keyNotFound
-        }
-
-        var standardBase64 = encoded.replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        let remainder = standardBase64.count % 4
-        if remainder != 0 {
-            standardBase64 += String(repeating: "=", count: 4 - remainder)
-        }
-        guard let key = Data(base64Encoded: standardBase64), key.count == 32 else {
-            throw TrackStoreError.invalidKey
-        }
-        return key
     }
 
     private func deriveEncryptionKey(_ masterKey: Data) -> SymmetricKey {

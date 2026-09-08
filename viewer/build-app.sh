@@ -12,6 +12,14 @@ executable_dir="$app_bundle/Contents/MacOS"
 resources_dir="$app_bundle/Contents/Resources"
 agent_path="$HOME/Library/LaunchAgents/com.ilifetrack.app.plist"
 agent_was_installed=false
+signing_identity=${ILIFETRACK_CODESIGN_IDENTITY:-"iLifeTrack Local Signing"}
+
+available_identities=$(security find-identity -v -p codesigning)
+if [[ "$available_identities" != *"\"$signing_identity\""* ]]; then
+    echo "找不到代码签名身份：$signing_identity" >&2
+    echo "本机首次构建请先运行：$script_dir/setup-local-signing.sh" >&2
+    exit 2
+fi
 
 if [[ -f "$agent_path" ]]; then
     agent_was_installed=true
@@ -39,10 +47,10 @@ install -m 755 "$script_dir/.build/release/iLifeTrack" "$executable_dir/iLifeTra
 install -m 644 "$script_dir/Resources/Info.plist" "$app_bundle/Contents/Info.plist"
 install -m 644 "$script_dir/Resources/AppIcon.icns" "$resources_dir/AppIcon.icns"
 ditto "$backend_dist/ilifetrack" "$resources_dir/backend/ilifetrack"
-codesign --force --sign - \
+codesign --force --sign "$signing_identity" \
     --identifier com.ilifetrack.background \
     "$resources_dir/backend/ilifetrack/ilifetrack"
-codesign --force --deep --sign - "$app_bundle"
+codesign --force --deep --sign "$signing_identity" "$app_bundle"
 codesign --verify --deep --strict "$app_bundle"
 
 staged_bundle="/Applications/.iLifeTrack.app.staging"

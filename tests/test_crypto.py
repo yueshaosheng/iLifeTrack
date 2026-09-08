@@ -1,6 +1,10 @@
+import base64
+import io
+
 import pytest
 from cryptography.exceptions import InvalidTag
 
+from ilifetrack.cli import _load_crypto
 from ilifetrack.crypto import CryptoBox, KeyStore
 
 
@@ -21,6 +25,14 @@ def test_load_or_create_reuses_key():
     second = CryptoBox.load_or_create(store)
     assert first == second
     assert store.value is not None
+
+
+def test_gui_backend_uses_master_key_from_anonymous_pipe(monkeypatch):
+    master_key = b"p" * 32
+    encoded = base64.urlsafe_b64encode(master_key).decode("ascii")
+    monkeypatch.setattr("sys.stdin", io.StringIO(encoded + "\n"))
+
+    assert _load_crypto(True) == CryptoBox.from_master_key(master_key)
 
 
 def test_authenticated_encryption_detects_tampering():

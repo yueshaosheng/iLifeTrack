@@ -9,9 +9,11 @@ final class BackgroundServiceRunner: @unchecked Sendable {
     private var interruptionSignal: DispatchSourceSignal?
 
     func run(backend: URL) -> Int32 {
+        let inputPipe = Pipe()
         process.executableURL = backend
-        process.arguments = ["run"]
+        process.arguments = ["--master-key-stdin", "run"]
         process.currentDirectoryURL = backend.deletingLastPathComponent()
+        process.standardInput = inputPipe
 
         signal(SIGTERM, SIG_IGN)
         signal(SIGINT, SIG_IGN)
@@ -38,7 +40,10 @@ final class BackgroundServiceRunner: @unchecked Sendable {
         statusMonitor.start()
 
         do {
+            let masterKey = try MasterKeyStore.shared.encodedKey()
             try process.run()
+            inputPipe.fileHandleForWriting.write(Data((masterKey + "\n").utf8))
+            try? inputPipe.fileHandleForWriting.close()
             process.waitUntilExit()
             statusMonitor.checkNow()
             finishMonitoring()

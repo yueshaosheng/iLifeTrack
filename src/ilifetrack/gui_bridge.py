@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import shutil
 import sys
@@ -48,6 +49,7 @@ def run_auth_bridge(
         password = str(request.get("password") or "")
         if not apple_id or not password:
             return _fail(output_stream, "missing_credentials")
+        crypto = _crypto_from_request(request.get("master_key"))
 
         # Work in an isolated copy so a failed refresh cannot damage the current
         # session. Retaining the trusted-browser cookies/token avoids making every
@@ -105,7 +107,6 @@ def run_auth_bridge(
             _protect_session_files(login_sessions)
             _install_session_files(login_sessions, selected_paths.sessions)
 
-        crypto = CryptoBox.load_or_create()
         try:
             config = load_config(selected_paths.config)
         except ConfigurationError:
@@ -130,6 +131,20 @@ def run_auth_bridge(
         )
     finally:
         password = ""
+
+
+def _crypto_from_request(value: Any) -> CryptoBox:
+    if value is None:
+        # Kept for command-line compatibility. The native app always supplies
+        # the in-memory key and is therefore the sole Keychain reader.
+        return CryptoBox.load_or_create()
+    try:
+        decoded = base64.urlsafe_b64decode(str(value).encode("ascii"))
+    except (ValueError, UnicodeEncodeError) as exc:
+        raise ConfigurationError("Invalid session key") from exc
+    if len(decoded) != 32:
+        raise ConfigurationError("Invalid session key")
+    return CryptoBox.from_master_key(decoded)
 
 
 def _read_message(stream: IO[str]) -> dict[str, Any]:

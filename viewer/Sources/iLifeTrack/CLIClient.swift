@@ -42,8 +42,13 @@ enum CLIClient {
     }
 
     static func run(_ arguments: [String]) async throws -> String {
-        try await Task.detached(priority: .userInitiated) {
-            try runSynchronously(executable: executableURL, arguments: arguments)
+        let masterKey = try MasterKeyStore.shared.encodedKey()
+        return try await Task.detached(priority: .userInitiated) {
+            try runSynchronously(
+                executable: executableURL,
+                arguments: ["--master-key-stdin"] + arguments,
+                standardInput: masterKey + "\n"
+            )
         }.value
     }
 
@@ -56,20 +61,26 @@ enum CLIClient {
     }
 
     private static func runSynchronously(
-        executable: URL, arguments: [String]
+        executable: URL, arguments: [String], standardInput: String? = nil
     ) throws -> String {
         guard FileManager.default.isExecutableFile(atPath: executable.path) else {
             throw CLIClientError.executableMissing
         }
         let outputPipe = Pipe()
         let errorPipe = Pipe()
+        let inputPipe = standardInput == nil ? nil : Pipe()
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments
         process.currentDirectoryURL = workingDirectory
         process.standardOutput = outputPipe
         process.standardError = errorPipe
+        process.standardInput = inputPipe
         try process.run()
+        if let standardInput, let inputPipe {
+            inputPipe.fileHandleForWriting.write(Data(standardInput.utf8))
+            try? inputPipe.fileHandleForWriting.close()
+        }
         process.waitUntilExit()
 
         let output = outputPipe.fileHandleForReading.readDataToEndOfFile()

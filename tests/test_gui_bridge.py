@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 
@@ -40,14 +41,16 @@ def test_gui_auth_bridge_uses_json_lines_and_never_echoes_password(
     monkeypatch.setattr("ilifetrack.gui_bridge._new_api", lambda *_args: FakeAPI())
     monkeypatch.setattr(
         "ilifetrack.gui_bridge.CryptoBox.load_or_create",
-        lambda: CryptoBox.from_master_key(b"g" * 32),
+        lambda: (_ for _ in ()).throw(AssertionError("Keychain must not be read")),
     )
+    encoded_master_key = base64.urlsafe_b64encode(b"g" * 32).decode("ascii")
     input_stream = io.StringIO(
         json.dumps(
             {
                 "action": "begin",
                 "apple_id": "user@example.com",
                 "password": "very-secret",
+                "master_key": encoded_master_key,
             }
         )
         + "\n"

@@ -50,17 +50,21 @@ iLifeTrack 是一款记录个人 Apple 设备轨迹和通话、短信记录的 m
 ```bash
 cd iLifeTrack
 uv sync --all-extras
+./viewer/setup-local-signing.sh
 ./viewer/build-app.sh
 open /Applications/iLifeTrack.app
 ```
 
-脚本会构建 SwiftUI 前端和 PyInstaller 后端，采用本地临时签名，并安装到：
+首次构建会创建一个仅供本机使用的长期签名身份。构建脚本会用该身份签名
+SwiftUI 前端和 PyInstaller 后端，并安装到：
 
 ```text
 /Applications/iLifeTrack.app
 ```
 
-当前构建适合本机开发和自用。公开分发仍需要 Developer ID 签名、Hardened Runtime 和 Apple 公证。
+固定签名可让钥匙串和完全磁盘访问权限在本机升级后继续有效。首次迁移到固定签名时，
+仍需完成最后一次钥匙串和完全磁盘访问授权。公开分发需要通过
+`ILIFETRACK_CODESIGN_IDENTITY` 指定 Developer ID，并完成 Hardened Runtime 和 Apple 公证。
 
 ## 快速使用
 
@@ -87,6 +91,8 @@ open /Applications/iLifeTrack.app
 - `logs/`：后台状态日志，不记录密码、验证码或坐标。
 
 Apple 账户密码和验证码仅通过本机进程管道传递，不写入配置、命令参数或日志。删除 iLifeTrack 的本地通讯副本不会删除 Apple“信息”或系统通话记录。
+加密主密钥只由原生应用读取一次并缓存在内存中，再通过匿名进程管道交给后台组件；
+不会写入命令参数、配置或日志。
 
 ## 项目结构
 

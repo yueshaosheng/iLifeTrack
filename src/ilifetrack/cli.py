@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import subprocess
 import sys
@@ -26,6 +27,7 @@ from .service import uninstall as uninstall_agent
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ilifetrack")
+    parser.add_argument("--master-key-stdin", action="store_true", help=argparse.SUPPRESS)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     auth = subparsers.add_parser(
@@ -145,7 +147,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
         config = load_config(paths.config)
-        crypto = CryptoBox.load_or_create()
+        crypto = _load_crypto(args.master_key_stdin)
         if args.command == "restore-latest-backup":
             backup = _latest_backup(paths.backups)
             if backup is None:
@@ -302,6 +304,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"错误：{exc}", file=sys.stderr)
         return 2
     return 1
+
+
+def _load_crypto(from_stdin: bool) -> CryptoBox:
+    if not from_stdin:
+        return CryptoBox.load_or_create()
+    encoded = sys.stdin.readline().strip()
+    try:
+        master_key = base64.urlsafe_b64decode(encoded.encode("ascii"))
+    except (ValueError, UnicodeEncodeError) as exc:
+        raise ConfigurationError("Invalid session key") from exc
+    if len(master_key) != 32:
+        raise ConfigurationError("Invalid session key")
+    return CryptoBox.from_master_key(master_key)
 
 
 def _auth(paths: AppPaths, apple_id_argument: str | None) -> int:

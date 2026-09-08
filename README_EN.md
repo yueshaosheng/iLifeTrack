@@ -50,17 +50,18 @@ Install Xcode Command Line Tools, Swift 6, Python 3.10–3.14, and [uv](https://
 ```bash
 cd iLifeTrack
 uv sync --all-extras
+./viewer/setup-local-signing.sh
 ./viewer/build-app.sh
 open /Applications/iLifeTrack.app
 ```
 
-The script builds the SwiftUI frontend and the PyInstaller backend, applies an ad-hoc local signature, and installs the app at:
+The first build creates a persistent signing identity for this Mac. The build script signs the SwiftUI frontend and PyInstaller backend with that identity, then installs the app at:
 
 ```text
 /Applications/iLifeTrack.app
 ```
 
-The current build is intended for local development and personal use. Public distribution still requires Developer ID signing, Hardened Runtime, and Apple notarization.
+The stable identity lets Keychain and Full Disk Access authorization survive local upgrades. The first migration to stable signing still requires one final Keychain and Full Disk Access authorization. Public distribution requires a Developer ID selected through `ILIFETRACK_CODESIGN_IDENTITY`, Hardened Runtime, and Apple notarization.
 
 ## Quick start
 
@@ -87,6 +88,7 @@ Runtime data is excluded from the Git repository and stored at:
 - `logs/`: background status logs; no passwords, verification codes, or coordinates.
 
 Apple Account passwords and verification codes pass only through a local process pipe. They are not written to configuration, command arguments, or logs. Deleting an iLifeTrack archive does not delete data from Apple Messages or the system call history.
+The native app reads the encryption master key once, keeps it in memory, and passes it to the backend through an anonymous process pipe. The key is never written to command arguments, configuration, or logs.
 
 ## Repository layout
 

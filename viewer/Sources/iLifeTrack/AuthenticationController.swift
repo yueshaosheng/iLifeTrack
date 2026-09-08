@@ -33,7 +33,12 @@ final class AuthBridgeSession: @unchecked Sendable {
         process.standardOutput = outputPipe
         process.standardError = FileHandle.nullDevice
         try process.run()
-        try send(["action": "begin", "apple_id": appleID, "password": password])
+        try send([
+            "action": "begin",
+            "apple_id": appleID,
+            "password": password,
+            "master_key": try MasterKeyStore.shared.encodedKey(),
+        ])
         return try readResponse()
     }
 
