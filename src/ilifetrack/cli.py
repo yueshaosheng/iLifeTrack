@@ -151,7 +151,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 install_agent(paths)
                 restarted = True
             suffix = "，后台服务已重启" if restarted else ""
-            print(f"采集间隔已设为 {args.seconds} 秒{suffix}")
+            print(f"位置采集间隔已设为 {args.seconds} 秒{suffix}")
             return 0
         if args.command == "retention":
             if args.days < 0:

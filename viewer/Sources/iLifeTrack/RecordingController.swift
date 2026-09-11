@@ -55,7 +55,7 @@ final class RecordingController: ObservableObject {
     }
 
     func setInterval(_ seconds: Int) async {
-        await perform(success: "采集间隔已更新") {
+        await perform(success: "位置采集间隔已更新") {
             _ = try await CLIClient.run(["interval", String(seconds)])
         }
     }

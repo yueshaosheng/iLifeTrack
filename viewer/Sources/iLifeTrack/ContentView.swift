@@ -140,7 +140,7 @@ struct ContentView: View {
             Divider()
                 .frame(height: 20)
 
-            Picker("采集间隔", selection: $intervalChoice) {
+            Picker("位置采集间隔", selection: $intervalChoice) {
                 Text("1 分钟").tag(60)
                 Text("5 分钟（推荐）").tag(300)
                 Text("10 分钟").tag(600)
