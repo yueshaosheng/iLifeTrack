@@ -13,6 +13,7 @@ from pathlib import Path
 from re import match
 from typing import IO, Any
 
+from .accounts import activate_account, mark_account_verified
 from .config import Config, load_config, save_config
 from .crypto import CryptoBox
 from .database import HistoryDatabase
@@ -111,14 +112,11 @@ def run_auth_bridge(
             config = load_config(selected_paths.config)
         except ConfigurationError:
             config = Config()
-        config.apple_id = apple_id
-
         with HistoryDatabase(selected_paths.database, crypto) as database:
             now_ms = int(time.time() * 1000)
             available = set(database.sync_devices(devices, now_ms))
-            config.selected_device_keys = [
-                key for key in config.selected_device_keys if key in available
-            ]
+            active_account = activate_account(config, apple_id, available)
+            mark_account_verified(config, active_account, now_ms)
         save_config(selected_paths.config, config)
         _emit(output_stream, {"event": "authenticated", "device_count": len(devices)})
         return 0

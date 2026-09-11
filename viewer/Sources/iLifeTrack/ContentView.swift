@@ -85,8 +85,7 @@ struct ContentView: View {
                 MapBrowserView(
                     store: store,
                     recording: recording,
-                    browserState: locationBrowserState,
-                    onShowAuthentication: { showingSettings = true }
+                    browserState: locationBrowserState
                 )
             case .communications:
                 CommunicationArchiveView(store: store, archiveState: communicationArchiveState)
@@ -94,7 +93,7 @@ struct ContentView: View {
         }
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
-                    Button("记录设置", systemImage: "slider.horizontal.3") {
+                    Button("设置", systemImage: "slider.horizontal.3") {
                         showingSettings = true
                     }
                 }
@@ -219,10 +218,8 @@ struct MapBrowserView: View {
     @ObservedObject var store: TrackStore
     @ObservedObject var recording: RecordingController
     @ObservedObject var browserState: LocationBrowserState
-    let onShowAuthentication: () -> Void
     @AppStorage("coordinateCorrectionMode") private var coordinateCorrectionRawValue =
         CoordinateCorrectionMode.automatic.rawValue
-    @State private var showingCancelAuthenticationConfirmation = false
     private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     private var selectedDeviceKey: String? {
@@ -337,20 +334,6 @@ struct MapBrowserView: View {
         .onChange(of: coordinateCorrectionRawValue) { _, _ in
             resetTimelineAndCamera()
         }
-        .alert("取消 Apple 账户认证？", isPresented: $showingCancelAuthenticationConfirmation) {
-            Button("保留认证", role: .cancel) {}
-            Button("取消认证", role: .destructive) {
-                Task {
-                    await recording.cancelAuthentication()
-                    store.reload()
-                }
-            }
-        } message: {
-            Text(
-                "本机保存的 Apple 登录会话会被移除，并停止记录设备位置。"
-                    + "已有轨迹、通讯归档和加密密钥都会保留。"
-            )
-        }
     }
 
     private var sidebar: some View {
@@ -396,34 +379,6 @@ struct MapBrowserView: View {
             .help("自动校正中国大陆地区的固定地图偏移；数据库仍保存 Apple 返回的原始坐标。")
 
             List(selection: $browserState.selectedDeviceKey) {
-                Section("Apple 账户") {
-                    HStack(spacing: 10) {
-                        Image(systemName: accountStatusIcon)
-                            .foregroundStyle(accountStatusColor)
-                            .frame(width: 22)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(accountStatusTitle)
-                            if recording.isConfigured {
-                                Text(recording.appleID)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-
-                    if recording.isConfigured {
-                        Button("取消认证…", role: .destructive) {
-                            showingCancelAuthenticationConfirmation = true
-                        }
-                        .disabled(recording.isBusy)
-                    } else {
-                        Button("开始认证…") {
-                            onShowAuthentication()
-                        }
-                    }
-                }
-
                 Section("当前“查找”设备") {
                     if availableDevices.isEmpty {
                         Text(recording.isConfigured ? "没有发现可用设备" : "认证后可查看并选择设备")
@@ -507,26 +462,6 @@ struct MapBrowserView: View {
     private var allAvailableDevicesSelected: Bool {
         !availableDeviceKeys.isEmpty
             && availableDeviceKeys.isSubset(of: recording.selectedDeviceKeys)
-    }
-
-    private var accountNeedsAuthentication: Bool {
-        recording.dashboard?.lastPollOutcome == "auth_required"
-    }
-
-    private var accountStatusTitle: String {
-        if !recording.isConfigured { return "未认证" }
-        return accountNeedsAuthentication ? "需要重新认证" : "已认证"
-    }
-
-    private var accountStatusIcon: String {
-        if !recording.isConfigured { return "person.crop.circle.badge.questionmark" }
-        return accountNeedsAuthentication
-            ? "person.crop.circle.badge.exclamationmark" : "checkmark.circle.fill"
-    }
-
-    private var accountStatusColor: Color {
-        if !recording.isConfigured { return .secondary }
-        return accountNeedsAuthentication ? .orange : .green
     }
 
     private func recordingBinding(for deviceKey: String) -> Binding<Bool> {

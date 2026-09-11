@@ -15,6 +15,9 @@ from .errors import ConfigurationError
 class Config:
     version: int = 1
     apple_id: str = ""
+    apple_accounts: list[str] = field(default_factory=list)
+    account_device_selections: dict[str, list[str]] = field(default_factory=dict)
+    account_auth_verified_ms: dict[str, int] = field(default_factory=dict)
     selected_device_keys: list[str] = field(default_factory=list)
     interval_seconds: int = 300
     retention_days: int | None = None
@@ -29,6 +32,22 @@ class Config:
             raise ConfigurationError("The polling interval must be at least 60 seconds")
         if self.retention_days is not None and self.retention_days < 1:
             raise ConfigurationError("Retention days must be positive or null")
+        if not isinstance(self.apple_accounts, list) or not all(
+            isinstance(account, str) for account in self.apple_accounts
+        ):
+            raise ConfigurationError("Apple accounts must be a list of strings")
+        if not isinstance(self.account_device_selections, dict) or not all(
+            isinstance(account, str)
+            and isinstance(keys, list)
+            and all(isinstance(key, str) for key in keys)
+            for account, keys in self.account_device_selections.items()
+        ):
+            raise ConfigurationError("Apple account device selections are invalid")
+        if not isinstance(self.account_auth_verified_ms, dict) or not all(
+            isinstance(account, str) and isinstance(timestamp, int) and timestamp >= 0
+            for account, timestamp in self.account_auth_verified_ms.items()
+        ):
+            raise ConfigurationError("Apple account authentication status is invalid")
 
 
 def load_config(config_path: Path) -> Config:

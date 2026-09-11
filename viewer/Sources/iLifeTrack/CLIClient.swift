@@ -104,6 +104,7 @@ enum CLIClient {
 
 struct LocalConfig: Decodable {
     let appleID: String
+    let appleAccounts: [String]?
     let selectedDeviceKeys: [String]
     let intervalSeconds: Int
     let retentionDays: Int?
@@ -111,6 +112,7 @@ struct LocalConfig: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case appleID = "apple_id"
+        case appleAccounts = "apple_accounts"
         case selectedDeviceKeys = "selected_device_keys"
         case intervalSeconds = "interval_seconds"
         case retentionDays = "retention_days"
@@ -119,6 +121,7 @@ struct LocalConfig: Decodable {
 }
 
 struct DashboardStatus: Decodable, Sendable {
+    let activeAccountAuthenticated: Bool?
     let totalPoints: Int
     let historyStartMS: Int64?
     let historyEndMS: Int64?
@@ -146,6 +149,7 @@ struct DashboardStatus: Decodable, Sendable {
     let latestBackup: BackupStatus?
 
     enum CodingKeys: String, CodingKey {
+        case activeAccountAuthenticated = "active_account_authenticated"
         case totalPoints = "total_points"
         case historyStartMS = "history_start_ms"
         case historyEndMS = "history_end_ms"

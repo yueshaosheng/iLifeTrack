@@ -19,14 +19,16 @@ struct RecordingSettingsView: View {
     @State private var communicationClearKind = ""
     @State private var showingRestoreConfirmation = false
     @State private var restartServiceAfterAuthentication = false
+    @State private var authenticationAppleID = ""
+    @State private var accountToRemove: String?
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("记录设置")
+                    Text("设置")
                         .font(.title2.bold())
-                    Text("管理后台记录，不需要打开终端。")
+                    Text("管理 Apple 账户、后台记录和本地数据。")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -129,20 +131,46 @@ struct RecordingSettingsView: View {
                 }
 
                 Section("Apple 账户") {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(recording.isConfigured ? "认证信息已配置" : "尚未认证")
-                            Text("密码和验证码只交给本机认证进程，不会写入配置文件。")
-                                .font(.caption)
+                    LabeledContent("当前状态") {
+                        if recording.isConfigured {
+                            Label(
+                                activeAccountNeedsAuthentication ? "需要重新认证" : "已认证",
+                                systemImage: activeAccountNeedsAuthentication
+                                    ? "person.crop.circle.badge.exclamationmark"
+                                    : "checkmark.circle.fill"
+                            )
+                            .foregroundStyle(
+                                activeAccountNeedsAuthentication ? .orange : .green
+                            )
+                        } else {
+                            Text(recording.appleAccounts.isEmpty ? "尚未认证" : "尚未选择账户")
                                 .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Button(recording.isConfigured ? "重新认证…" : "开始认证…") {
-                            authentication.reset()
-                            restartServiceAfterAuthentication = recording.isRunning
-                            showingAuthentication = true
+                    }
+
+                    if recording.appleAccounts.isEmpty {
+                        Text("还没有保存在这台 Mac 上的 Apple 账户。")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(recording.appleAccounts, id: \.self) { account in
+                            accountRow(account)
                         }
                     }
+
+                    HStack {
+                        Text("每个账户分别保留登录会话和记录设备选择；历史归档不会因切换账户而删除。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("添加账户…", systemImage: "person.badge.plus") {
+                            showAuthentication(for: "")
+                        }
+                        .disabled(recording.isBusy)
+                    }
+
+                    Text("密码和验证码只交给本机认证进程，不会写入配置文件。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("通讯归档") {
@@ -379,7 +407,10 @@ struct RecordingSettingsView: View {
             }
         }
         .sheet(isPresented: $showingAuthentication) {
-            AuthenticationView(controller: authentication) {
+            AuthenticationView(
+                controller: authentication,
+                initialAppleID: authenticationAppleID
+            ) {
                 showingAuthentication = false
                 Task {
                     await recording.authenticationCompleted(
@@ -445,6 +476,96 @@ struct RecordingSettingsView: View {
         } message: {
             Text("整个 iLifeTrack 数据库将回到备份时的状态。恢复后新增的轨迹和通讯会被替换，但恢复前会再创建一个安全备份。")
         }
+        .alert(
+            "取消 Apple 账户认证？",
+            isPresented: Binding(
+                get: { accountToRemove != nil },
+                set: { if !$0 { accountToRemove = nil } }
+            )
+        ) {
+            Button("保留认证", role: .cancel) { accountToRemove = nil }
+            Button("取消认证", role: .destructive) {
+                guard let account = accountToRemove else { return }
+                accountToRemove = nil
+                Task {
+                    await recording.removeAccount(account)
+                    store.reload()
+                }
+            }
+        } message: {
+            Text(
+                "只会移除这个账户在本机保存的登录会话。已有轨迹、通讯归档、"
+                    + "其他 Apple 账户和加密密钥都会保留。"
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func accountRow(_ account: String) -> some View {
+        let isActive = account.caseInsensitiveCompare(recording.appleID) == .orderedSame
+        HStack(spacing: 10) {
+            Image(systemName: accountIcon(isActive: isActive))
+                .foregroundStyle(accountColor(isActive: isActive))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account)
+                    .lineLimit(1)
+                Text(accountSubtitle(isActive: isActive))
+                    .font(.caption)
+                    .foregroundStyle(
+                        isActive && activeAccountNeedsAuthentication ? .orange : .secondary
+                    )
+            }
+            Spacer()
+            if !isActive {
+                Button("切换") {
+                    Task {
+                        await recording.switchAccount(to: account)
+                        store.reload()
+                    }
+                }
+                .disabled(recording.isBusy)
+            }
+            Menu {
+                Button(isActive ? "重新认证…" : "重新认证并切换…") {
+                    showAuthentication(for: account)
+                }
+                Button("取消认证…", role: .destructive) {
+                    accountToRemove = account
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .disabled(recording.isBusy)
+        }
+    }
+
+    private var activeAccountNeedsAuthentication: Bool {
+        recording.dashboard?.activeAccountAuthenticated == false
+    }
+
+    private func accountIcon(isActive: Bool) -> String {
+        if !isActive { return "person.crop.circle" }
+        return activeAccountNeedsAuthentication
+            ? "person.crop.circle.badge.exclamationmark" : "checkmark.circle.fill"
+    }
+
+    private func accountColor(isActive: Bool) -> Color {
+        if !isActive { return .secondary }
+        return activeAccountNeedsAuthentication ? .orange : .green
+    }
+
+    private func accountSubtitle(isActive: Bool) -> String {
+        guard isActive else { return "已保存，可切换" }
+        return activeAccountNeedsAuthentication ? "当前使用 · 需要重新认证" : "当前使用 · 已认证"
+    }
+
+    private func showAuthentication(for appleID: String) {
+        authentication.reset()
+        authenticationAppleID = appleID
+        restartServiceAfterAuthentication = recording.isRunning
+        showingAuthentication = true
     }
 
     private func syncDrafts() {
@@ -534,9 +655,19 @@ private struct AuthenticationView: View {
     let onFinished: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var appleID = ""
+    @State private var appleID: String
     @State private var password = ""
     @State private var verificationCode = ""
+
+    init(
+        controller: AuthenticationController,
+        initialAppleID: String,
+        onFinished: @escaping () -> Void
+    ) {
+        _controller = ObservedObject(wrappedValue: controller)
+        _appleID = State(initialValue: initialAppleID)
+        self.onFinished = onFinished
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {

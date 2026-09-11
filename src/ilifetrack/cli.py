@@ -5,13 +5,21 @@ from __future__ import annotations
 import argparse
 import base64
 import json
-import shutil
 import subprocess
 import sys
 import time
 from collections.abc import Sequence
 from pathlib import Path
 
+from .accounts import (
+    activate_account,
+    active_account_is_authenticated,
+    configured_accounts,
+    mark_account_verified,
+    remove_account,
+    remove_session_files,
+    update_active_selection,
+)
 from .collector import Collector, run_forever
 from .communications import CommunicationCollector, MacCommunicationSource
 from .config import Config, load_config, save_config
@@ -36,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     auth.add_argument("--apple-id", help="Apple account; password is prompted securely")
     subparsers.add_parser("logout", help=argparse.SUPPRESS)
+    switch_account = subparsers.add_parser("switch-account", help=argparse.SUPPRESS)
+    switch_account.add_argument("apple_id")
+    remove_saved_account = subparsers.add_parser(
+        "remove-account", help=argparse.SUPPRESS
+    )
+    remove_saved_account.add_argument("apple_id")
 
     subparsers.add_parser("devices", help="Refresh and list discoverable devices")
 
@@ -110,6 +124,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _auth(paths, args.apple_id)
         if args.command == "logout":
             return _logout(paths)
+        if args.command == "remove-account":
+            return _remove_account(paths, args.apple_id)
         if args.command in {"install-agent", "start"}:
             config = load_config(paths.config)
             if not config.selected_device_keys and not config.communications_enabled:
@@ -169,6 +185,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"已恢复备份：{backup.name}")
             return 0
         with HistoryDatabase(paths.database, crypto) as database:
+            if args.command == "switch-account":
+                return _switch_account(paths, config, database, args.apple_id)
             if args.command == "communications":
                 source = MacCommunicationSource()
                 if args.action == "check":
@@ -216,6 +234,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return 0
             if args.command == "gui-status":
                 report = database.dashboard()
+                report["active_account_authenticated"] = (
+                    active_account_is_authenticated(config, report)
+                )
                 report["communications_enabled"] = config.communications_enabled
                 report["full_disk_access_granted"] = (
                     MacCommunicationSource().has_access()
@@ -342,42 +363,87 @@ def _auth(paths: AppPaths, apple_id_argument: str | None) -> int:
     provider = ICloudProvider.interactive_login(apple_id, paths.sessions)
     crypto = CryptoBox.load_or_create()
     config = existing or Config()
-    config.apple_id = apple_id
-    save_config(paths.config, config)
     with HistoryDatabase(paths.database, crypto) as database:
         print("认证成功。当前可见设备：")
         available = _refresh_and_print_devices(provider, database, config)
-        _reconcile_selected_devices(config, set(available), paths)
+        active_account = activate_account(config, apple_id, available)
+        mark_account_verified(config, active_account, int(time.time() * 1000))
+        save_config(paths.config, config)
+        _reload_agent_for_config(paths, config)
     print("下一步运行：ilifetrack select --all（或指定设备短标识）")
     return 0
 
 
 def _logout(paths: AppPaths) -> int:
-    """Remove the local Apple session without deleting the user's archive."""
+    """Remove the active Apple session without deleting the user's archive."""
     try:
         config = load_config(paths.config)
     except ConfigurationError:
         config = Config()
 
-    config.apple_id = ""
-    config.selected_device_keys = []
+    if not config.apple_id:
+        print("当前没有已认证的 Apple 账户")
+        return 0
+    return _remove_account(paths, config.apple_id)
+
+
+def _remove_account(paths: AppPaths, apple_id: str) -> int:
+    """Remove one saved Apple session while preserving every local archive."""
+    try:
+        config = load_config(paths.config)
+    except ConfigurationError:
+        config = Config()
+    active_account = config.apple_id
+    if not remove_account(config, apple_id):
+        raise ConfigurationError("找不到要移除的 Apple 账户")
+    remove_session_files(paths.sessions, apple_id)
     save_config(paths.config, config)
 
-    if paths.sessions.exists():
-        for entry in paths.sessions.iterdir():
-            if entry.is_dir():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink(missing_ok=True)
-
-    if launch_agent_path().exists():
-        if config.communications_enabled:
-            install_agent(paths)
-        else:
-            uninstall_agent()
+    if active_account.casefold() == apple_id.strip().casefold():
+        _reload_agent_for_config(paths, config)
 
     print("Apple 账户认证已取消；轨迹、通讯归档和加密密钥均已保留")
     return 0
+
+
+def _switch_account(
+    paths: AppPaths,
+    config: Config,
+    database: HistoryDatabase,
+    apple_id: str,
+) -> int:
+    """Validate and activate one of the locally saved Apple sessions."""
+    requested = apple_id.strip()
+    account = next(
+        (
+            item
+            for item in configured_accounts(config)
+            if item.casefold() == requested.casefold()
+        ),
+        None,
+    )
+    if account is None:
+        raise ConfigurationError("找不到要切换的 Apple 账户")
+
+    provider = ICloudProvider.from_saved_session(account, paths.sessions)
+    now_ms = int(time.time() * 1000)
+    devices = provider.fetch_devices(now_ms)
+    available = database.sync_devices(devices, now_ms)
+    activate_account(config, account, available)
+    mark_account_verified(config, account, now_ms)
+    save_config(paths.config, config)
+    _reload_agent_for_config(paths, config)
+    print(f"已切换 Apple 账户：{account}；发现 {len(devices)} 台设备")
+    return 0
+
+
+def _reload_agent_for_config(paths: AppPaths, config: Config) -> None:
+    if not launch_agent_path().exists():
+        return
+    if config.selected_device_keys or config.communications_enabled:
+        install_agent(paths)
+    else:
+        uninstall_agent()
 
 
 def _devices(
@@ -417,7 +483,7 @@ def _reconcile_selected_devices(
     selected = [key for key in previous if key in available_keys]
     removed = len(previous) - len(selected)
     if removed:
-        config.selected_device_keys = selected
+        update_active_selection(config, selected)
         save_config(paths.config, config)
     return removed
 
@@ -445,7 +511,7 @@ def _select(
         unknown = sorted(set(selected) - set(available))
         if unknown:
             raise ConfigurationError(f"Unknown device key: {', '.join(unknown)}")
-    config.selected_device_keys = selected
+    update_active_selection(config, selected)
     save_config(paths.config, config)
     print(f"已选择 {len(selected)} 台设备")
     if launch_agent_path().exists():

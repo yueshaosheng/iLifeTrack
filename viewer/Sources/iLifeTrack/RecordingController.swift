@@ -6,6 +6,7 @@ import Foundation
 final class RecordingController: ObservableObject {
     @Published private(set) var isConfigured = false
     @Published private(set) var appleID = ""
+    @Published private(set) var appleAccounts: [String] = []
     @Published private(set) var isRunning = false
     @Published private(set) var intervalSeconds = 300
     @Published private(set) var retentionDays: Int?
@@ -21,6 +22,10 @@ final class RecordingController: ObservableObject {
            let config = try? JSONDecoder().decode(LocalConfig.self, from: data)
         {
             appleID = config.appleID.trimmingCharacters(in: .whitespacesAndNewlines)
+            appleAccounts = normalizedAccounts(
+                saved: config.appleAccounts ?? [],
+                active: appleID
+            )
             isConfigured = !appleID.isEmpty
             intervalSeconds = config.intervalSeconds
             retentionDays = config.retentionDays
@@ -29,6 +34,7 @@ final class RecordingController: ObservableObject {
         } else {
             isConfigured = false
             appleID = ""
+            appleAccounts = []
             selectedDeviceKeys = []
             communicationsEnabled = false
         }
@@ -72,9 +78,15 @@ final class RecordingController: ObservableObject {
         }
     }
 
-    func cancelAuthentication() async {
+    func switchAccount(to appleID: String) async {
+        await perform(success: "Apple 账户已切换") {
+            _ = try await CLIClient.run(["switch-account", appleID])
+        }
+    }
+
+    func removeAccount(_ appleID: String) async {
         await perform(success: "Apple 账户认证已取消，已有归档数据仍然保留") {
-            _ = try await CLIClient.runWithoutMasterKey(["logout"])
+            _ = try await CLIClient.runWithoutMasterKey(["remove-account", appleID])
         }
     }
 
@@ -127,12 +139,15 @@ final class RecordingController: ObservableObject {
     }
 
     func authenticationCompleted(restartService: Bool) async {
-        if restartService {
-            await perform(success: "认证已更新，后台位置记录已恢复") {
+        await refresh()
+        if restartService && (!selectedDeviceKeys.isEmpty || communicationsEnabled) {
+            await perform(success: "认证已更新，后台记录已恢复") {
                 _ = try await CLIClient.run(["start"])
             }
-        } else {
-            await refresh()
+        } else if restartService, isRunning {
+            await perform(success: "账户已保存；选择记录设备后可重新开始后台记录") {
+                _ = try await CLIClient.run(["stop"])
+            }
         }
     }
 
@@ -176,5 +191,18 @@ final class RecordingController: ObservableObject {
             return
         }
         dashboard = value
+    }
+
+    private func normalizedAccounts(saved: [String], active: String) -> [String] {
+        var result: [String] = []
+        for rawValue in saved + [active] {
+            let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty,
+               !result.contains(where: { $0.caseInsensitiveCompare(value) == .orderedSame })
+            {
+                result.append(value)
+            }
+        }
+        return result
     }
 }

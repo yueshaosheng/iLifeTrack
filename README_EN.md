@@ -26,6 +26,7 @@ It also archives messages, iMessages, and call records that have already synced 
 ### Location history
 
 - Records the last known locations of iPhone, iPad, and Mac devices in your personal Apple Account.
+- Saves and switches between multiple Apple Accounts in Settings, with separate device selections for each account.
 - Supports multiple devices and polling intervals from 1 to 1,440 minutes.
 - Uses MapKit to display historical tracks with time-range filters and timeline playback.
 - Corrects the mainland China map offset for display while retaining original coordinates in the database.
@@ -73,7 +74,7 @@ The stable identity lets Keychain and Full Disk Access authorization survive loc
 
 ## Quick start
 
-1. Open iLifeTrack and authenticate with your Apple Account in **Recording Settings**.
+1. Open iLifeTrack, add an Apple Account in **Settings**, and complete two-factor authentication. Add or switch accounts there when needed.
 2. Return to **Location History** and enable the devices you want to record continuously.
 3. Choose a polling interval directly in the main window.
 4. Select **Start Recording**. Closing the main window does not stop the background service; when quitting the app, choose whether to leave recording active or stop it before exiting.

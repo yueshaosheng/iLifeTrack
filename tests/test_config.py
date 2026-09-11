@@ -9,7 +9,13 @@ from ilifetrack.errors import ConfigurationError
 
 def test_config_round_trip_and_private_permissions(tmp_path):
     target = tmp_path / "state" / "config.json"
-    expected = Config(apple_id="user@example.com", selected_device_keys=["abc"])
+    expected = Config(
+        apple_id="user@example.com",
+        apple_accounts=["user@example.com"],
+        account_device_selections={"user@example.com": ["abc"]},
+        account_auth_verified_ms={"user@example.com": 1_700_000_000_000},
+        selected_device_keys=["abc"],
+    )
     save_config(target, expected)
 
     assert load_config(target) == expected
@@ -38,6 +44,9 @@ def test_old_config_without_retention_remains_compatible(tmp_path):
     loaded = load_config(target)
     assert loaded.retention_days is None
     assert loaded.communications_enabled is False
+    assert loaded.apple_accounts == []
+    assert loaded.account_device_selections == {}
+    assert loaded.account_auth_verified_ms == {}
 
 
 def test_config_rejects_invalid_retention(tmp_path):
