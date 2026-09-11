@@ -123,11 +123,19 @@ struct ContentView: View {
 
     private var recordingControlBar: some View {
         HStack(spacing: 12) {
-            Label(
-                recording.isRunning ? "正在记录" : "已停止",
-                systemImage: recording.isRunning ? "record.circle.fill" : "stop.circle"
-            )
-            .foregroundStyle(recording.isRunning ? .green : .secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Label(
+                    "位置轨迹：\(locationRecordingStatus.title)",
+                    systemImage: locationRecordingStatus.systemImage
+                )
+                .foregroundStyle(locationRecordingStatus.color)
+                Label(
+                    "通讯归档：\(communicationRecordingStatus.title)",
+                    systemImage: communicationRecordingStatus.systemImage
+                )
+                .foregroundStyle(communicationRecordingStatus.color)
+            }
+            .font(.caption)
 
             Divider()
                 .frame(height: 20)
@@ -177,12 +185,13 @@ struct ContentView: View {
             Spacer(minLength: 8)
 
             if recording.isRunning {
-                Button("停止记录", systemImage: "stop.fill", role: .destructive) {
+                Button("停止后台记录", systemImage: "stop.fill", role: .destructive) {
                     Task { await recording.stop() }
                 }
                 .disabled(recording.isBusy)
+                .help("同时停止位置轨迹采集和通讯归档扫描；已有数据和配置都会保留。")
             } else {
-                Button("开始记录", systemImage: "record.circle") {
+                Button("开始后台记录", systemImage: "record.circle") {
                     Task { await recording.start() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -195,12 +204,45 @@ struct ContentView: View {
                     recording.selectedDeviceKeys.isEmpty
                         && !recording.communicationsEnabled
                         ? "请先选择至少一台设备，或启用通讯归档。"
-                        : "启动后台持续记录"
+                        : "按照当前设置启动位置轨迹采集和通讯归档扫描"
                 )
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private var locationRecordingStatus: (
+        title: String, systemImage: String, color: Color
+    ) {
+        if recording.selectedDeviceKeys.isEmpty {
+            return ("未启用", "location.slash", .secondary)
+        }
+        if !recording.isRunning {
+            return ("已停止", "stop.circle", .secondary)
+        }
+        if recording.dashboard?.activeAccountAuthenticated == false {
+            return ("等待重新认证", "exclamationmark.triangle.fill", .orange)
+        }
+        return ("记录中", "location.fill", .green)
+    }
+
+    private var communicationRecordingStatus: (
+        title: String, systemImage: String, color: Color
+    ) {
+        if !recording.communicationsEnabled {
+            return ("未启用", "archivebox", .secondary)
+        }
+        if !recording.isRunning {
+            return ("已停止", "stop.circle", .secondary)
+        }
+        if recording.dashboard?.fullDiskAccessGranted == false {
+            return ("等待完全磁盘访问", "exclamationmark.shield.fill", .orange)
+        }
+        if recording.dashboard?.lastCommunicationOutcome == "internal_error" {
+            return ("扫描异常", "exclamationmark.triangle.fill", .orange)
+        }
+        return ("监视中", "archivebox.fill", .green)
     }
 
     private func syncIntervalControl(_ seconds: Int) {
