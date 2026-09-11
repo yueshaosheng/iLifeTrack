@@ -67,10 +67,6 @@ struct CommunicationArchiveView: View {
                     Text("\(filteredEntries.count) 条")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button("重新载入", systemImage: "arrow.clockwise") {
-                        store.reload()
-                    }
-                    .buttonStyle(.borderless)
                 }
                 .padding()
             }
@@ -82,7 +78,7 @@ struct CommunicationArchiveView: View {
                 ContentUnavailableView(
                     "还没有本地通讯归档",
                     systemImage: "tray",
-                    description: Text("请在“记录设置”中启用通讯归档。只会保存启用后同步到这台 Mac 的新记录。")
+                    description: Text("请在“设置”中启用通讯归档。只会保存启用后同步到这台 Mac 的新记录。")
                 )
             }
         }

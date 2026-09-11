@@ -438,10 +438,11 @@ struct MapBrowserView: View {
             }
 
             Divider()
-            Button("重新载入轨迹", systemImage: "arrow.clockwise") {
-                reload()
+            Button("回到最新位置", systemImage: "location.fill") {
+                returnToLatestPosition()
             }
             .buttonStyle(.borderless)
+            .disabled(filteredPoints.isEmpty)
             .padding()
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
@@ -637,6 +638,14 @@ struct MapBrowserView: View {
         selectedPointID = filteredPoints.last?.id
         followsLatestPoint = true
         fitCamera(to: filteredPoints)
+    }
+
+    private func returnToLatestPosition() {
+        guard let latestPoint = filteredPoints.last else { return }
+        playbackIndex = filteredPoints.count - 1
+        selectedPointID = latestPoint.id
+        followsLatestPoint = true
+        fitCamera(to: [latestPoint])
     }
 
     private func refreshAutomatically() {
