@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from hashlib import sha256
 from pathlib import Path
 from re import match
 
@@ -17,6 +18,26 @@ def configured_accounts(config: Config) -> list[str]:
         if account and not any(item.casefold() == account.casefold() for item in result):
             result.append(account)
     return result
+
+
+def account_storage_id(apple_id: str) -> str:
+    # Keep this byte-for-byte compatible with Swift's `lowercased()` path lookup.
+    normalized = apple_id.strip().lower().encode("utf-8")
+    if not normalized:
+        raise ValueError("Apple account is required")
+    return sha256(normalized).hexdigest()[:32]
+
+
+def claim_legacy_database(config: Config, legacy_database: Path) -> bool:
+    """Assign an existing pre-multi-account database to its original account."""
+    if (
+        config.legacy_database_account_id
+        or not config.apple_id.strip()
+        or not legacy_database.is_file()
+    ):
+        return False
+    config.legacy_database_account_id = account_storage_id(config.apple_id)
+    return True
 
 
 def activate_account(

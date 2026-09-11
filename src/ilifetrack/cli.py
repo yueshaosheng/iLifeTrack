@@ -9,11 +9,13 @@ import subprocess
 import sys
 import time
 from collections.abc import Sequence
+from contextlib import ExitStack
 from pathlib import Path
 
 from .accounts import (
     activate_account,
     active_account_is_authenticated,
+    claim_legacy_database,
     configured_accounts,
     mark_account_verified,
     remove_account,
@@ -167,33 +169,64 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
         config = load_config(paths.config)
+        if claim_legacy_database(config, paths.database):
+            save_config(paths.config, config)
         crypto = _load_crypto(args.master_key_stdin)
+        if args.command == "switch-account":
+            return _switch_account(paths, config, crypto, args.apple_id)
         if args.command == "restore-latest-backup":
-            backup = _latest_backup(paths.backups)
+            if not config.apple_id:
+                raise ConfigurationError("请先选择 Apple 账户")
+            database_path = paths.location_database(
+                config.apple_id, config.legacy_database_account_id
+            )
+            backup_directory = paths.location_backups(
+                config.apple_id, config.legacy_database_account_id
+            )
+            backup = _latest_backup(backup_directory)
             if backup is None:
                 raise ConfigurationError("没有可恢复的备份")
             agent_was_running = launch_agent_path().exists()
             if agent_was_running:
                 uninstall_agent()
             try:
-                with HistoryDatabase(paths.database, crypto) as database:
-                    database.create_backup(paths.backups, "before-restore")
+                with HistoryDatabase(database_path, crypto) as database:
+                    database.create_backup(backup_directory, "before-restore")
                     database.restore_backup(backup)
             finally:
                 if agent_was_running:
                     install_agent(paths)
             print(f"已恢复备份：{backup.name}")
             return 0
-        with HistoryDatabase(paths.database, crypto) as database:
-            if args.command == "switch-account":
-                return _switch_account(paths, config, database, args.apple_id)
+        location_path = (
+            paths.location_database(config.apple_id, config.legacy_database_account_id)
+            if config.apple_id
+            else None
+        )
+        communication_path = paths.communications_database(
+            config.legacy_database_account_id
+        )
+        with ExitStack() as databases:
+            communication_database = databases.enter_context(
+                HistoryDatabase(communication_path, crypto)
+            )
+            if location_path == communication_path:
+                location_database = communication_database
+            elif location_path is not None:
+                location_database = databases.enter_context(
+                    HistoryDatabase(location_path, crypto)
+                )
+            else:
+                location_database = None
             if args.command == "communications":
                 source = MacCommunicationSource()
                 if args.action == "check":
                     source.check_access()
                     print('{"readable":true}')
                     return 0
-                communication_collector = CommunicationCollector(source, database)
+                communication_collector = CommunicationCollector(
+                    source, communication_database
+                )
                 if args.action == "enable":
                     imported = communication_collector.import_existing()
                     config.communications_enabled = True
@@ -217,14 +250,21 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print("通讯归档扫描完成")
                 return 0
             if args.command == "clear-communications":
-                backup = database.create_backup(
-                    paths.backups, "before-clear-communications"
+                backup = communication_database.create_backup(
+                    paths.communications_backups(config.legacy_database_account_id),
+                    "before-clear-communications",
                 )
-                deleted = database.clear_communications(kind=args.kind)
+                deleted = communication_database.clear_communications(kind=args.kind)
                 print(f"已清除 {deleted} 条本地通讯归档；备份：{backup.name}")
                 return 0
             if args.command == "clear-history":
-                backup = database.create_backup(paths.backups, "before-clear-history")
+                database = _require_location_database(location_database)
+                backup = database.create_backup(
+                    paths.location_backups(
+                        config.apple_id, config.legacy_database_account_id
+                    ),
+                    "before-clear-history",
+                )
                 deleted = database.clear_history(
                     device_key=args.device_key,
                     start_ms=args.start_ms,
@@ -233,7 +273,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"已清除 {deleted['points']} 个轨迹点；备份：{backup.name}")
                 return 0
             if args.command == "gui-status":
-                report = database.dashboard()
+                communication_report = communication_database.dashboard()
+                report = (
+                    location_database.dashboard()
+                    if location_database is not None
+                    else _empty_location_report()
+                )
+                _merge_communication_status(report, communication_report)
                 report["active_account_authenticated"] = (
                     active_account_is_authenticated(config, report)
                 )
@@ -241,25 +287,43 @@ def main(argv: Sequence[str] | None = None) -> int:
                 report["full_disk_access_granted"] = (
                     MacCommunicationSource().has_access()
                 )
-                report["database_bytes"] = _database_size(paths.database)
-                backups = _list_backups(paths.backups)
+                report["database_bytes"] = sum(
+                    _database_size(path)
+                    for path in {location_path, communication_path}
+                    if path is not None
+                )
+                backups = (
+                    _list_backups(
+                        paths.location_backups(
+                            config.apple_id, config.legacy_database_account_id
+                        )
+                    )
+                    if config.apple_id
+                    else []
+                )
                 report["backup_count"] = len(backups)
                 report["latest_backup"] = backups[0] if backups else None
                 print(json.dumps(report, ensure_ascii=False, separators=(",", ":")))
                 return 0
             if args.command == "status":
-                return _status(database, config, args.hours)
+                return _status(
+                    _require_location_database(location_database), config, args.hours
+                )
             if args.command == "movement-start":
-                session_id = database.start_movement()
+                session_id = _require_location_database(
+                    location_database
+                ).start_movement()
                 print(f"移动测试 #{session_id} 已开始")
                 return 0
             if args.command == "movement-stop":
-                session_id = database.stop_movement()
+                session_id = _require_location_database(
+                    location_database
+                ).stop_movement()
                 print(f"移动测试 #{session_id} 已结束")
                 return 0
 
             communication_collector = (
-                CommunicationCollector(MacCommunicationSource(), database)
+                CommunicationCollector(MacCommunicationSource(), communication_database)
                 if config.communications_enabled
                 else None
             )
@@ -281,16 +345,26 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise
             if args.command == "devices":
                 assert provider is not None
-                return _devices(provider, database, paths, config)
+                return _devices(
+                    provider,
+                    _require_location_database(location_database),
+                    paths,
+                    config,
+                )
             if args.command == "select":
                 assert provider is not None
                 return _select(
-                    provider, database, paths, config, args.device_keys, args.all
+                    provider,
+                    _require_location_database(location_database),
+                    paths,
+                    config,
+                    args.device_keys,
+                    args.all,
                 )
             collector = (
                 Collector(
                     provider,
-                    database,
+                    _require_location_database(location_database),
                     config.selected_device_keys,
                     retention_days=config.retention_days,
                     reconcile_selection=lambda available: _reconciled_selection(
@@ -363,7 +437,12 @@ def _auth(paths: AppPaths, apple_id_argument: str | None) -> int:
     provider = ICloudProvider.interactive_login(apple_id, paths.sessions)
     crypto = CryptoBox.load_or_create()
     config = existing or Config()
-    with HistoryDatabase(paths.database, crypto) as database:
+    if claim_legacy_database(config, paths.database):
+        save_config(paths.config, config)
+    database_path = paths.location_database(
+        apple_id, config.legacy_database_account_id
+    )
+    with HistoryDatabase(database_path, crypto) as database:
         print("认证成功。当前可见设备：")
         available = _refresh_and_print_devices(provider, database, config)
         active_account = activate_account(config, apple_id, available)
@@ -409,7 +488,7 @@ def _remove_account(paths: AppPaths, apple_id: str) -> int:
 def _switch_account(
     paths: AppPaths,
     config: Config,
-    database: HistoryDatabase,
+    crypto: CryptoBox,
     apple_id: str,
 ) -> int:
     """Validate and activate one of the locally saved Apple sessions."""
@@ -428,7 +507,11 @@ def _switch_account(
     provider = ICloudProvider.from_saved_session(account, paths.sessions)
     now_ms = int(time.time() * 1000)
     devices = provider.fetch_devices(now_ms)
-    available = database.sync_devices(devices, now_ms)
+    database_path = paths.location_database(
+        account, config.legacy_database_account_id
+    )
+    with HistoryDatabase(database_path, crypto) as database:
+        available = database.sync_devices(devices, now_ms)
     activate_account(config, account, available)
     mark_account_verified(config, account, now_ms)
     save_config(paths.config, config)
@@ -444,6 +527,47 @@ def _reload_agent_for_config(paths: AppPaths, config: Config) -> None:
         install_agent(paths)
     else:
         uninstall_agent()
+
+
+def _require_location_database(
+    database: HistoryDatabase | None,
+) -> HistoryDatabase:
+    if database is None:
+        raise ConfigurationError("请先在设置中选择 Apple 账户")
+    return database
+
+
+def _empty_location_report() -> dict[str, object]:
+    return {
+        "total_points": 0,
+        "history_start_ms": None,
+        "history_end_ms": None,
+        "last_poll_started_ms": None,
+        "last_poll_finished_ms": None,
+        "last_poll_outcome": None,
+        "last_poll_detail": None,
+        "last_success_ms": None,
+        "last_error_ms": None,
+        "last_error_outcome": None,
+        "last_error_detail": None,
+        "next_expected_poll_ms": None,
+        "latest_location_lag_seconds": None,
+        "device_statuses": [],
+    }
+
+
+def _merge_communication_status(
+    report: dict[str, object], communication_report: dict[str, object]
+) -> None:
+    for key in (
+        "total_communications",
+        "message_count",
+        "call_count",
+        "last_communication_archived_ms",
+        "last_communication_scan_ms",
+        "last_communication_outcome",
+    ):
+        report[key] = communication_report[key]
 
 
 def _devices(

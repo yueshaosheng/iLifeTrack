@@ -18,6 +18,7 @@ class Config:
     apple_accounts: list[str] = field(default_factory=list)
     account_device_selections: dict[str, list[str]] = field(default_factory=dict)
     account_auth_verified_ms: dict[str, int] = field(default_factory=dict)
+    legacy_database_account_id: str = ""
     selected_device_keys: list[str] = field(default_factory=list)
     interval_seconds: int = 300
     retention_days: int | None = None
@@ -48,6 +49,14 @@ class Config:
             for account, timestamp in self.account_auth_verified_ms.items()
         ):
             raise ConfigurationError("Apple account authentication status is invalid")
+        if self.legacy_database_account_id and (
+            len(self.legacy_database_account_id) != 32
+            or any(
+                character not in "0123456789abcdef"
+                for character in self.legacy_database_account_id
+            )
+        ):
+            raise ConfigurationError("Legacy database account identifier is invalid")
 
 
 def load_config(config_path: Path) -> Config:

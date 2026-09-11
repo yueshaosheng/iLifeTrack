@@ -1,6 +1,7 @@
 from ilifetrack import cli
 from ilifetrack.accounts import activate_account, configured_accounts
 from ilifetrack.config import Config, load_config, save_config
+from ilifetrack.crypto import CryptoBox
 from ilifetrack.models import DeviceSnapshot
 from ilifetrack.paths import AppPaths
 
@@ -67,13 +68,15 @@ def test_account_switch_restores_only_the_target_account_selection(
 ):
     paths = AppPaths(tmp_path / "state")
     paths.ensure()
+    crypto = CryptoBox.from_master_key(b"a" * 32)
+    second_device_key = crypto.keyed_id("device", "second-id")
     config = Config(
         apple_id="first@example.com",
         apple_accounts=["first@example.com", "second@example.com"],
         selected_device_keys=["first-device"],
         account_device_selections={
             "first@example.com": ["first-device"],
-            "second@example.com": ["second-device", "missing-device"],
+            "second@example.com": [second_device_key, "missing-device"],
         },
     )
 
@@ -89,10 +92,6 @@ def test_account_switch_restores_only_the_target_account_selection(
                 )
             ]
 
-    class Database:
-        def sync_devices(self, _devices, _timestamp):
-            return ["second-device"]
-
     monkeypatch.setattr(
         cli.ICloudProvider,
         "from_saved_session",
@@ -105,16 +104,18 @@ def test_account_switch_restores_only_the_target_account_selection(
     )
 
     assert (
-        cli._switch_account(
-            paths, config, Database(), "SECOND@example.com"
-        )
+            cli._switch_account(paths, config, crypto, "SECOND@example.com")
         == 0
     )
     loaded = load_config(paths.config)
     assert loaded.apple_id == "second@example.com"
-    assert loaded.selected_device_keys == ["second-device"]
+    assert paths.location_database("second@example.com").is_file()
+    assert not paths.location_database("first@example.com").exists()
+    assert loaded.selected_device_keys == [second_device_key]
     assert loaded.account_device_selections["first@example.com"] == ["first-device"]
-    assert loaded.account_device_selections["second@example.com"] == ["second-device"]
+    assert loaded.account_device_selections["second@example.com"] == [
+        second_device_key
+    ]
 
 
 def test_registering_a_new_account_does_not_reuse_the_previous_devices():

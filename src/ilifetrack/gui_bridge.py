@@ -13,7 +13,7 @@ from pathlib import Path
 from re import match
 from typing import IO, Any
 
-from .accounts import activate_account, mark_account_verified
+from .accounts import activate_account, claim_legacy_database, mark_account_verified
 from .config import Config, load_config, save_config
 from .crypto import CryptoBox
 from .database import HistoryDatabase
@@ -112,7 +112,12 @@ def run_auth_bridge(
             config = load_config(selected_paths.config)
         except ConfigurationError:
             config = Config()
-        with HistoryDatabase(selected_paths.database, crypto) as database:
+        if claim_legacy_database(config, selected_paths.database):
+            save_config(selected_paths.config, config)
+        database_path = selected_paths.location_database(
+            apple_id, config.legacy_database_account_id
+        )
+        with HistoryDatabase(database_path, crypto) as database:
             now_ms = int(time.time() * 1000)
             available = set(database.sync_devices(devices, now_ms))
             active_account = activate_account(config, apple_id, available)

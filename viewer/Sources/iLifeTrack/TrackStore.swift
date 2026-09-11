@@ -51,11 +51,11 @@ enum TrackStoreError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .keyNotFound:
-            "找不到轨迹加密密钥，请打开“记录设置”完成 Apple 账户认证。"
+            "找不到轨迹加密密钥，请打开“设置”完成 Apple 账户认证。"
         case .invalidKey:
             "Keychain 中的轨迹密钥格式无效。"
         case .databaseNotFound:
-            "还没有历史数据库，请打开“记录设置”完成认证并开始记录。"
+            "还没有历史数据库，请打开“设置”完成认证并开始记录。"
         case let .databaseOpen(message):
             "无法打开历史数据库：\(message)"
         case let .databaseQuery(message):
@@ -102,14 +102,81 @@ private struct HistorySnapshot {
 
 private struct HistoryReader {
     func load() throws -> HistorySnapshot {
-        let databaseURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/iLifeTrack/history.sqlite3")
-        guard FileManager.default.fileExists(atPath: databaseURL.path) else {
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/iLifeTrack")
+        let configData = try? Data(contentsOf: CLIClient.configURL)
+        let config = configData.flatMap { try? JSONDecoder().decode(LocalConfig.self, from: $0) }
+        let appleID = config?.appleID.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let legacyAccountID = config?.legacyDatabaseAccountID ?? ""
+        let legacyDatabaseURL = root.appendingPathComponent("history.sqlite3")
+        let legacyDatabaseExists = FileManager.default.fileExists(
+            atPath: legacyDatabaseURL.path
+        )
+        let usesLegacyDatabase = legacyDatabaseExists && (
+            legacyAccountID.isEmpty || accountStorageID(appleID) == legacyAccountID
+        )
+        let locationDatabaseURL: URL? = if appleID.isEmpty {
+            nil
+        } else if usesLegacyDatabase {
+            legacyDatabaseURL
+        } else {
+            root.appendingPathComponent("accounts")
+                .appendingPathComponent(accountStorageID(appleID))
+                .appendingPathComponent("history.sqlite3")
+        }
+        let communicationDatabaseURL = legacyDatabaseExists
+            ? legacyDatabaseURL
+            : root.appendingPathComponent("communications.sqlite3")
+        let locationExists = locationDatabaseURL.map {
+            FileManager.default.fileExists(atPath: $0.path)
+        } ?? false
+        let communicationExists = FileManager.default.fileExists(
+            atPath: communicationDatabaseURL.path
+        )
+        guard locationExists || communicationExists else {
             throw TrackStoreError.databaseNotFound
         }
 
         let masterKey = try MasterKeyStore.shared.loadOrCreate()
         let encryptionKey = deriveEncryptionKey(masterKey)
+        var devices: [TrackedDevice] = []
+        var points: [TrackPoint] = []
+        var communications: [CommunicationEntry] = []
+        var skippedDevices = 0
+        var skippedPoints = 0
+        var skippedCommunications = 0
+
+        if let locationDatabaseURL, locationExists {
+            try withDatabase(at: locationDatabaseURL) { database in
+                devices = try loadDevices(database, encryptionKey, skipped: &skippedDevices)
+                points = try loadPoints(database, encryptionKey, skipped: &skippedPoints)
+                if locationDatabaseURL == communicationDatabaseURL {
+                    communications = try loadCommunications(
+                        database, encryptionKey, skipped: &skippedCommunications
+                    )
+                }
+            }
+        }
+        if communicationExists, locationDatabaseURL != communicationDatabaseURL {
+            try withDatabase(at: communicationDatabaseURL) { database in
+                communications = try loadCommunications(
+                    database, encryptionKey, skipped: &skippedCommunications
+                )
+            }
+        }
+        return HistorySnapshot(
+            devices: devices,
+            points: points,
+            communications: communications,
+            skippedRecords: skippedDevices + skippedPoints + skippedCommunications,
+            skippedPointRecords: skippedPoints
+        )
+    }
+
+    private func withDatabase(
+        at databaseURL: URL,
+        operation: (OpaquePointer) throws -> Void
+    ) throws {
         var database: OpaquePointer?
         let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX
         guard sqlite3_open_v2(databaseURL.path, &database, flags, nil) == SQLITE_OK,
@@ -121,22 +188,14 @@ private struct HistoryReader {
         }
         defer { sqlite3_close(database) }
         sqlite3_busy_timeout(database, 2_000)
+        try operation(database)
+    }
 
-        var skippedDevices = 0
-        var skippedPoints = 0
-        var skippedCommunications = 0
-        let devices = try loadDevices(database, encryptionKey, skipped: &skippedDevices)
-        let points = try loadPoints(database, encryptionKey, skipped: &skippedPoints)
-        let communications = try loadCommunications(
-            database, encryptionKey, skipped: &skippedCommunications
-        )
-        return HistorySnapshot(
-            devices: devices,
-            points: points,
-            communications: communications,
-            skippedRecords: skippedDevices + skippedPoints + skippedCommunications,
-            skippedPointRecords: skippedPoints
-        )
+    private func accountStorageID(_ appleID: String) -> String {
+        SHA256.hash(data: Data(appleID.lowercased().utf8))
+            .prefix(16)
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     private func deriveEncryptionKey(_ masterKey: Data) -> SymmetricKey {

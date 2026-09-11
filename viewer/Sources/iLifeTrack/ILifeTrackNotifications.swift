@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SQLite3
 import UserNotifications
@@ -60,16 +61,14 @@ private struct BackgroundStatusSnapshot {
 }
 
 final class BackgroundStatusMonitor: @unchecked Sendable {
-    private let databasePath: String
+    private let dataRoot: URL
     private let queue = DispatchQueue(label: "com.ilifetrack.status-monitor")
     private var timer: DispatchSourceTimer?
     private var previous = BackgroundStatusSnapshot()
 
     init() {
-        databasePath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(
-                "Library/Application Support/iLifeTrack/history.sqlite3"
-            ).path
+        dataRoot = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/iLifeTrack")
     }
 
     func start() {
@@ -126,6 +125,35 @@ final class BackgroundStatusMonitor: @unchecked Sendable {
     }
 
     private func readSnapshot() -> BackgroundStatusSnapshot {
+        let paths = currentDatabasePaths()
+        var snapshot = previous
+        if let locationPath = paths.location {
+            readDatabase(locationPath) { connection in
+                if let row = queryOne(
+                    connection,
+                    sql: "SELECT id, outcome FROM poll_runs ORDER BY id DESC LIMIT 1"
+                ) {
+                    snapshot.pollID = row.integer
+                    snapshot.pollOutcome = row.text
+                }
+            }
+        }
+        readDatabase(paths.communications) { connection in
+            if let row = queryOne(
+                connection,
+                sql: "SELECT scanned_at_ms, outcome FROM communication_status WHERE id=1"
+            ) {
+                snapshot.communicationScanMS = row.integer
+                snapshot.communicationOutcome = row.text
+            }
+        }
+        return snapshot
+    }
+
+    private func readDatabase(
+        _ databasePath: String,
+        operation: (OpaquePointer) -> Void
+    ) {
         var connection: OpaquePointer?
         guard sqlite3_open_v2(
             databasePath,
@@ -134,26 +162,45 @@ final class BackgroundStatusMonitor: @unchecked Sendable {
             nil
         ) == SQLITE_OK, let connection else {
             if connection != nil { sqlite3_close(connection) }
-            return previous
+            return
         }
         defer { sqlite3_close(connection) }
+        operation(connection)
+    }
 
-        var snapshot = previous
-        if let row = queryOne(
-            connection,
-            sql: "SELECT id, outcome FROM poll_runs ORDER BY id DESC LIMIT 1"
-        ) {
-            snapshot.pollID = row.integer
-            snapshot.pollOutcome = row.text
+    private func currentDatabasePaths() -> (location: String?, communications: String) {
+        let legacyURL = dataRoot.appendingPathComponent("history.sqlite3")
+        guard let data = try? Data(contentsOf: CLIClient.configURL),
+              let config = try? JSONDecoder().decode(LocalConfig.self, from: data)
+        else {
+            return (nil, dataRoot.appendingPathComponent("communications.sqlite3").path)
         }
-        if let row = queryOne(
-            connection,
-            sql: "SELECT scanned_at_ms, outcome FROM communication_status WHERE id=1"
-        ) {
-            snapshot.communicationScanMS = row.integer
-            snapshot.communicationOutcome = row.text
+        let appleID = config.appleID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let legacyAccountID = config.legacyDatabaseAccountID ?? ""
+        let legacyDatabaseExists = FileManager.default.fileExists(atPath: legacyURL.path)
+        let usesLegacyDatabase = legacyDatabaseExists && (
+            legacyAccountID.isEmpty || accountStorageID(appleID) == legacyAccountID
+        )
+        let location: String? = if appleID.isEmpty {
+            nil
+        } else if usesLegacyDatabase {
+            legacyURL.path
+        } else {
+            dataRoot.appendingPathComponent("accounts")
+                .appendingPathComponent(accountStorageID(appleID))
+                .appendingPathComponent("history.sqlite3").path
         }
-        return snapshot
+        let communications = legacyDatabaseExists
+            ? legacyURL.path
+            : dataRoot.appendingPathComponent("communications.sqlite3").path
+        return (location, communications)
+    }
+
+    private func accountStorageID(_ appleID: String) -> String {
+        SHA256.hash(data: Data(appleID.lowercased().utf8))
+            .prefix(16)
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     private func queryOne(

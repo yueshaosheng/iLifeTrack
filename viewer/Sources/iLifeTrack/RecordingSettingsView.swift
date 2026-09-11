@@ -89,7 +89,7 @@ struct RecordingSettingsView: View {
                                 }
                             }
                         }
-                        LabeledContent("已保存轨迹") {
+                        LabeledContent("当前账户轨迹") {
                             Text("\(dashboard.totalPoints) 个位置点")
                         }
                         if store.skippedPointRecords > 0 {
@@ -312,7 +312,7 @@ struct RecordingSettingsView: View {
                     Divider()
 
                     if let backup = recording.dashboard?.latestBackup {
-                        LabeledContent("自动加密备份") {
+                        LabeledContent("当前账户轨迹备份") {
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(dateText(backup.createdAtMS))
                                 Text(
@@ -337,7 +337,7 @@ struct RecordingSettingsView: View {
                             .disabled(recording.isBusy)
                         }
                     } else {
-                        LabeledContent("自动加密备份", value: "尚无备份")
+                        LabeledContent("当前账户轨迹备份", value: "尚无备份")
                     }
 
                     Divider()
@@ -474,7 +474,7 @@ struct RecordingSettingsView: View {
                 }
             }
         } message: {
-            Text("整个 iLifeTrack 数据库将回到备份时的状态。恢复后新增的轨迹和通讯会被替换，但恢复前会再创建一个安全备份。")
+            Text("当前 Apple 账户的轨迹数据库将回到备份时的状态。通讯归档和其他账户不受影响；恢复前会再创建一个安全备份。")
         }
         .alert(
             "取消 Apple 账户认证？",

@@ -94,7 +94,9 @@ SwiftUI 前端和 PyInstaller 后端，并安装到：
 ~/Library/Application Support/iLifeTrack
 ```
 
-- `history.sqlite3`：加密的轨迹与通讯归档。
+- `accounts/<账户标识>/history.sqlite3`：各 Apple 账户独立的加密轨迹数据库。
+- `communications.sqlite3`：不依附“查找”账户的本机通讯归档数据库。
+- 从旧版本升级时，原有 `history.sqlite3` 会继续作为原账户的轨迹数据库和共享通讯归档使用，数据不会复制或丢失；其他账户仍使用独立数据库。
 - `config.json`：采集设置，不包含密码或明文坐标。
 - `sessions/`：本机 iCloud 登录会话。
 - `logs/`：后台状态日志，不记录密码、验证码或坐标。

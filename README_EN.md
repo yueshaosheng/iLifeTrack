@@ -91,7 +91,9 @@ Runtime data is excluded from the Git repository and stored at:
 ~/Library/Application Support/iLifeTrack
 ```
 
-- `history.sqlite3`: encrypted location and communications history.
+- `accounts/<account-id>/history.sqlite3`: a separate encrypted location database for each Apple Account.
+- `communications.sqlite3`: the shared local communications archive, independent of the Find My account.
+- When upgrading, the existing `history.sqlite3` remains the original account's location database and the shared communications archive, so no history is copied or lost. Other accounts still use separate databases.
 - `config.json`: collection settings; no password or plaintext coordinates.
 - `sessions/`: the local iCloud login session.
 - `logs/`: background status logs; no passwords, verification codes, or coordinates.

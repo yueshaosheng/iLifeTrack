@@ -105,6 +105,7 @@ enum CLIClient {
 struct LocalConfig: Decodable {
     let appleID: String
     let appleAccounts: [String]?
+    let legacyDatabaseAccountID: String?
     let selectedDeviceKeys: [String]
     let intervalSeconds: Int
     let retentionDays: Int?
@@ -113,6 +114,7 @@ struct LocalConfig: Decodable {
     enum CodingKeys: String, CodingKey {
         case appleID = "apple_id"
         case appleAccounts = "apple_accounts"
+        case legacyDatabaseAccountID = "legacy_database_account_id"
         case selectedDeviceKeys = "selected_device_keys"
         case intervalSeconds = "interval_seconds"
         case retentionDays = "retention_days"
