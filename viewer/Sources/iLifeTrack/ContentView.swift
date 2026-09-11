@@ -51,10 +51,16 @@ struct ContentView: View {
     @StateObject private var recording = RecordingController()
     @StateObject private var locationBrowserState = LocationBrowserState()
     @StateObject private var communicationArchiveState = CommunicationArchiveState()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingSettings = false
     @State private var selectedSection: AppSection = .locations
     @State private var intervalChoice = 300
     @State private var customIntervalMinutes = 5
+    private let statusRefreshTimer = Timer.publish(
+        every: 10,
+        on: .main,
+        in: .common
+    ).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -105,6 +111,14 @@ struct ContentView: View {
             }
             .onChange(of: recording.intervalSeconds) { _, newValue in
                 syncIntervalControl(newValue)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active, !recording.isBusy else { return }
+                Task { await recording.refresh() }
+            }
+            .onReceive(statusRefreshTimer) { _ in
+                guard scenePhase == .active, !recording.isBusy else { return }
+                Task { await recording.refresh() }
             }
     }
 
@@ -162,12 +176,6 @@ struct ContentView: View {
             }
 
             Spacer(minLength: 8)
-
-            Button("重新读取状态", systemImage: "arrow.clockwise") {
-                Task { await recording.refresh() }
-            }
-            .disabled(recording.isBusy)
-            .help("重新读取后台服务、配置、最近采集结果、数据库统计和权限状态；不会向 Apple 请求新位置。")
 
             if recording.isRunning {
                 Button("停止记录", systemImage: "stop.fill", role: .destructive) {
