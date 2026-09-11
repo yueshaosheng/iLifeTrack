@@ -53,6 +53,8 @@ struct ContentView: View {
     @StateObject private var communicationArchiveState = CommunicationArchiveState()
     @State private var showingSettings = false
     @State private var selectedSection: AppSection = .locations
+    @State private var intervalChoice = 300
+    @State private var customIntervalMinutes = 5
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,6 +67,10 @@ struct ContentView: View {
             .labelsHidden()
             .frame(width: 260)
             .padding(8)
+
+            Divider()
+
+            recordingControlBar
 
             Divider()
 
@@ -82,12 +88,6 @@ struct ContentView: View {
         }
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
-                    Label(
-                        recording.isRunning ? "正在记录" : "已停止",
-                        systemImage: recording.isRunning ? "record.circle.fill" : "stop.circle"
-                    )
-                    .foregroundStyle(recording.isRunning ? .green : .secondary)
-
                     Button("记录设置", systemImage: "slider.horizontal.3") {
                         showingSettings = true
                     }
@@ -98,10 +98,112 @@ struct ContentView: View {
             }
             .task {
                 await recording.refresh()
+                syncIntervalControl(recording.intervalSeconds)
                 if !recording.isConfigured {
                     showingSettings = true
                 }
             }
+            .onChange(of: recording.intervalSeconds) { _, newValue in
+                syncIntervalControl(newValue)
+            }
+    }
+
+    private var recordingControlBar: some View {
+        HStack(spacing: 12) {
+            Label(
+                recording.isRunning ? "正在记录" : "已停止",
+                systemImage: recording.isRunning ? "record.circle.fill" : "stop.circle"
+            )
+            .foregroundStyle(recording.isRunning ? .green : .secondary)
+
+            Divider()
+                .frame(height: 20)
+
+            Picker("采集间隔", selection: $intervalChoice) {
+                Text("1 分钟").tag(60)
+                Text("5 分钟（推荐）").tag(300)
+                Text("10 分钟").tag(600)
+                Text("30 分钟").tag(1_800)
+                Text("自定义…").tag(0)
+            }
+            .pickerStyle(.menu)
+            .frame(width: 190)
+            .disabled(recording.isBusy)
+            .onChange(of: intervalChoice) { _, newValue in
+                guard newValue != 0, newValue != recording.intervalSeconds else { return }
+                Task {
+                    await recording.setInterval(newValue)
+                    syncIntervalControl(recording.intervalSeconds)
+                }
+            }
+
+            if intervalChoice == 0 {
+                TextField("分钟", value: $customIntervalMinutes, format: .number)
+                    .frame(width: 64)
+                    .textFieldStyle(.roundedBorder)
+                Stepper(
+                    "分钟",
+                    value: $customIntervalMinutes,
+                    in: 1 ... 1_440
+                )
+                .labelsHidden()
+                Button("应用") {
+                    Task {
+                        await recording.setInterval(customIntervalMinutes * 60)
+                        syncIntervalControl(recording.intervalSeconds)
+                    }
+                }
+                .disabled(
+                    recording.isBusy
+                        || customIntervalMinutes < 1
+                        || customIntervalMinutes > 1_440
+                        || customIntervalMinutes * 60 == recording.intervalSeconds
+                )
+            }
+
+            Spacer(minLength: 8)
+
+            Button("重新读取状态", systemImage: "arrow.clockwise") {
+                Task { await recording.refresh() }
+            }
+            .disabled(recording.isBusy)
+            .help("重新读取后台服务、配置、最近采集结果、数据库统计和权限状态；不会向 Apple 请求新位置。")
+
+            if recording.isRunning {
+                Button("停止记录", systemImage: "stop.fill", role: .destructive) {
+                    Task { await recording.stop() }
+                }
+                .disabled(recording.isBusy)
+            } else {
+                Button("开始记录", systemImage: "record.circle") {
+                    Task { await recording.start() }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(
+                    recording.isBusy
+                        || (recording.selectedDeviceKeys.isEmpty
+                            && !recording.communicationsEnabled)
+                )
+                .help(
+                    recording.selectedDeviceKeys.isEmpty
+                        && !recording.communicationsEnabled
+                        ? "请先选择至少一台设备，或启用通讯归档。"
+                        : "启动后台持续记录"
+                )
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private func syncIntervalControl(_ seconds: Int) {
+        let presets = [60, 300, 600, 1_800]
+        if presets.contains(seconds) {
+            intervalChoice = seconds
+        } else {
+            intervalChoice = 0
+            customIntervalMinutes = max(1, seconds / 60)
+        }
     }
 }
 
@@ -326,13 +428,32 @@ struct MapBrowserView: View {
                         }
                     }
 
-                    Button("刷新设备", systemImage: "arrow.clockwise") {
-                        Task {
-                            await recording.refreshDevices()
-                            store.reload()
+                    HStack {
+                        Button(
+                            allAvailableDevicesSelected ? "取消全选" : "全选设备",
+                            systemImage: allAvailableDevicesSelected
+                                ? "checkmark.circle.fill" : "checkmark.circle"
+                        ) {
+                            Task {
+                                await recording.applySelection(
+                                    allAvailableDevicesSelected ? [] : availableDeviceKeys
+                                )
+                            }
                         }
+                        .keyboardShortcut("a", modifiers: [.command, .option])
+                        .disabled(availableDevices.isEmpty || recording.isBusy)
+                        .help("一键选择或取消所有当前设备（⌥⌘A）")
+
+                        Spacer()
+
+                        Button("刷新设备", systemImage: "arrow.clockwise") {
+                            Task {
+                                await recording.refreshDevices()
+                                store.reload()
+                            }
+                        }
+                        .disabled(!recording.isConfigured || recording.isBusy)
                     }
-                    .disabled(!recording.isConfigured || recording.isBusy)
                 }
 
                 if !historicalDevices.isEmpty {
@@ -369,6 +490,15 @@ struct MapBrowserView: View {
 
     private var historicalDevices: [TrackedDevice] {
         store.devices.filter { !$0.isAvailable }
+    }
+
+    private var availableDeviceKeys: Set<String> {
+        Set(availableDevices.map(\.deviceKey))
+    }
+
+    private var allAvailableDevicesSelected: Bool {
+        !availableDeviceKeys.isEmpty
+            && availableDeviceKeys.isSubset(of: recording.selectedDeviceKeys)
     }
 
     private var accountNeedsAuthentication: Bool {

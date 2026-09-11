@@ -7,8 +7,6 @@ struct RecordingSettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject private var authentication = AuthenticationController()
-    @State private var draftInterval = 300
-    @State private var customIntervalMinutes = 5
     @State private var draftRetention = 0
     @State private var showingAuthentication = false
     @State private var showingClearConfirmation = false
@@ -123,69 +121,11 @@ struct RecordingSettingsView: View {
                         }
                     }
 
-                    HStack {
-                        Button("刷新状态", systemImage: "arrow.clockwise") {
-                            Task { await recording.refresh() }
-                        }
-                        Spacer()
-                        if recording.isRunning {
-                            Button("停止记录", role: .destructive) {
-                                Task { await recording.stop() }
-                            }
-                        } else {
-                            Button("开始记录") {
-                                Task { await recording.start() }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(
-                                recording.isBusy
-                                    || (recording.selectedDeviceKeys.isEmpty
-                                        && !recording.communicationsEnabled)
-                            )
-                        }
+                    Button("重新读取状态", systemImage: "arrow.clockwise") {
+                        Task { await recording.refresh() }
                     }
-                }
-
-                Section("采集设置") {
-
-                    Picker("采集间隔", selection: $draftInterval) {
-                        Text("1 分钟").tag(60)
-                        Text("5 分钟（推荐）").tag(300)
-                        Text("10 分钟").tag(600)
-                        Text("30 分钟").tag(1_800)
-                        Text("自定义…").tag(0)
-                    }
-
-                    if draftInterval == 0 {
-                        HStack {
-                            TextField(
-                                "分钟",
-                                value: $customIntervalMinutes,
-                                format: .number
-                            )
-                            .frame(width: 90)
-                            .textFieldStyle(.roundedBorder)
-                            Stepper(
-                                "分钟（1–1440）",
-                                value: $customIntervalMinutes,
-                                in: 1 ... 1_440
-                            )
-                        }
-                    }
-
-                    HStack {
-                        Button("应用间隔") {
-                            Task { await recording.setInterval(effectiveIntervalSeconds) }
-                        }
-                        .disabled(
-                            recording.isBusy
-                                || customIntervalMinutes < 1
-                                || customIntervalMinutes > 1_440
-                                || effectiveIntervalSeconds == recording.intervalSeconds
-                        )
-
-                        Spacer()
-                    }
+                    .disabled(recording.isBusy)
+                    .help("重新读取后台服务、配置、最近采集结果、数据库统计和权限状态；不会向 Apple 请求新位置。")
                 }
 
                 Section("Apple 账户") {
@@ -455,9 +395,6 @@ struct RecordingSettingsView: View {
             store.reload()
             syncDrafts()
         }
-        .onChange(of: recording.intervalSeconds) { _, newValue in
-            syncIntervalDraft(newValue)
-        }
         .onChange(of: recording.retentionDays) { _, newValue in
             draftRetention = newValue ?? 0
         }
@@ -511,27 +448,12 @@ struct RecordingSettingsView: View {
     }
 
     private func syncDrafts() {
-        syncIntervalDraft(recording.intervalSeconds)
         draftRetention = recording.retentionDays ?? 0
         if !initializedClearRange, let dashboard = recording.dashboard {
             clearStart = dashboard.historyStartMS.map { date(from: $0) }
                 ?? Date().addingTimeInterval(-30 * 86_400)
             clearEnd = dashboard.historyEndMS.map { date(from: $0) } ?? Date()
             initializedClearRange = true
-        }
-    }
-
-    private var effectiveIntervalSeconds: Int {
-        draftInterval == 0 ? customIntervalMinutes * 60 : draftInterval
-    }
-
-    private func syncIntervalDraft(_ seconds: Int) {
-        let presets = [60, 300, 600, 1_800]
-        if presets.contains(seconds) {
-            draftInterval = seconds
-        } else {
-            draftInterval = 0
-            customIntervalMinutes = max(1, seconds / 60)
         }
     }
 

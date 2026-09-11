@@ -75,7 +75,7 @@ The stable identity lets Keychain and Full Disk Access authorization survive loc
 
 1. Open iLifeTrack and authenticate with your Apple Account in **Recording Settings**.
 2. Return to **Location History** and enable the devices you want to record continuously.
-3. Choose a polling interval in **Recording Settings**.
+3. Choose a polling interval directly in the main window.
 4. Select **Start Recording**. Closing the main window does not stop the background service; when quitting the app, choose whether to leave recording active or stop it before exiting.
 5. Use **Location History** to inspect the map and timeline.
 6. To archive communications, grant Full Disk Access before enabling the archive.
